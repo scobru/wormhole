@@ -1,0 +1,86 @@
+@import "https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap";
+
+/* Custom theme variables - these complement DaisyUI's theme */
+:root {
+  --bg-gradient-dark: linear-gradient(180deg, hsl(var(--b3)) 0%, hsl(var(--b2)) 100%);
+}
+
+body {
+  background: var(--bg-gradient-dark);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Alert styling for status messages */
+.alert {
+  @apply rounded-xl p-4 mb-4;
+}
+
+.alert-error {
+  @apply bg-error/10 text-error border border-error/20;
+}
+
+.alert-success {
+  @apply bg-success/10 text-success border border-success/20;
+}
+
+.alert-info {
+  @apply bg-info/10 text-info border border-info/20;
+}
+
+/* Progress bar animation */
+.progress {
+  @apply transition-all duration-200;
+}
+
+/* Font variations */
+.poppins-thin { font-weight: 100; }
+.poppins-extralight { font-weight: 200; }
+.poppins-light { font-weight: 300; }
+.poppins-regular { font-weight: 400; }
+.poppins-medium { font-weight: 500; }
+.poppins-semibold { font-weight: 600; }
+.poppins-bold { font-weight: 700; }
+.poppins-extrabold { font-weight: 800; }
+.poppins-black { font-weight: 900; }
+
+/* Italic variations */
+.poppins-thin-italic { font-weight: 100; font-style: italic; }
+.poppins-extralight-italic { font-weight: 200; font-style: italic; }
+.poppins-light-italic { font-weight: 300; font-style: italic; }
+.poppins-regular-italic { font-weight: 400; font-style: italic; }
+.poppins-medium-italic { font-weight: 500; font-style: italic; }
+.poppins-semibold-italic { font-weight: 600; font-style: italic; }
+.poppins-bold-italic { font-weight: 700; font-style: italic; }
+.poppins-extrabold-italic { font-weight: 800; font-style: italic; }
+.poppins-black-italic { font-weight: 900; font-style: italic; }
+
+/* File drop zone animation */
+#send-prompt {
+  transition: all 0.2s ease-in-out;
+}
+
+#send-prompt:hover {
+  transform: scale(1.02);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--b2));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--p));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--pf));
+} 

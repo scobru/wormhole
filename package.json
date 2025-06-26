@@ -1,0 +1,37 @@
+{
+  "name": "gundb-wormhole",
+  "version": "1.1.0",
+  "description": "P2P file transfer tool using GunDB and a CLI.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "gwh": "src/index.js"
+  },
+  "scripts": {
+    "start": "npx serve .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "gundb",
+    "p2p",
+    "file-transfer",
+    "cli",
+    "wormhole"
+  ],
+  "author": "Shogun",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "clipboardy": "^4.0.0",
+    "filesize": "^10.1.0",
+    "gun": "^0.2020.1242",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "serve": "^14.2.1"
+  }
+} 

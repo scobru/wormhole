@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="night">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🌌 SHOGUN WORMHOLE PROTOCOL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gun/0.2020.1240/gun.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gun/0.2020.1240/lib/rindexed.js"></script>
+    
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles/wormhole.css">
+    <style>
+      :root {
+        --bg-gradient-dark: linear-gradient(180deg, #1a1240 0%, #0a0821 100%);
+        --color-accent: #4F6BF6;
+        --color-text: #ffffff;
+        --color-text-secondary: rgba(255, 255, 255, 0.6);
+        --color-input-bg: rgba(255, 255, 255, 0.05);
+        --color-input-border: rgba(255, 255, 255, 0.1);
+        --color-button: rgba(255, 255, 255, 0.1);
+      }
+      
+      body {
+        background: var(--bg-gradient-dark);
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        color: var(--color-text);
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+
+      .card {
+        background-color: #151515;
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+      }
+
+      .input-custom {
+        background-color: var(--color-input-bg) !important;
+        border: 1px solid var(--color-input-border) !important;
+        border-radius: 12px !important;
+        color: var(--color-text) !important;
+        padding: 1rem !important;
+        width: 100% !important;
+        transition: all 0.2s ease;
+      }
+
+      .input-custom:focus {
+        border-color: var(--color-accent) !important;
+        box-shadow: none !important;
+        outline: none !important;
+      }
+
+      .btn-custom {
+        background-color: var(--color-button) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        color: var(--color-text) !important;
+        font-weight: 600 !important;
+        padding: 1rem !important;
+        width: 100% !important;
+        transition: all 0.2s ease;
+        text-transform: none !important;
+        margin-top: 1rem;
+      }
+
+      .btn-custom:hover {
+        background-color: var(--color-accent) !important;
+      }
+
+      .lock-icon {
+        color: var(--color-accent);
+        height: 48px;
+        width: 48px;
+        margin-bottom: 1.5rem;
+      }
+
+      .tab-custom {
+        color: var(--color-text-secondary);
+        border-bottom: 2px solid transparent;
+        padding-bottom: 0.5rem;
+        margin: 0 1rem;
+        transition: all 0.2s ease;
+      }
+
+      .tab-custom.active {
+        color: var(--color-text);
+        border-bottom-color: var(--color-accent);
+      }
+
+      .file-drop-zone {
+        border: 2px dashed var(--color-input-border);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        color: var(--color-text-secondary);
+        transition: all 0.2s ease;
+      }
+
+      .file-drop-zone:hover {
+        border-color: var(--color-accent);
+        background-color: var(--color-input-bg);
+      }
+    </style>
+  </head>
+  <body class="antialiased">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div class="card w-full max-w-sm">
+        <div class="p-8">
+          <div class="flex flex-col items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            
+            <h2 class="text-2xl font-semibold mb-2">Shogun Wormhole</h2>
+            <p class="text-base opacity-60 mb-8">Trasferimento file sicuro e privato</p>
+
+            <div class="tabs tabs-boxed bg-base-200 mb-8">
+              <a class="tab tab-active" onclick="switchTab('send')">Trasmetti</a>
+              <a class="tab" onclick="switchTab('receive')">Ricevi</a>
+            </div>
+
+            <!-- Send Tab -->
+            <div id="send-tab" class="w-full">
+              <div id="send-prompt" class="border-2 border-dashed border-base-content/20 rounded-xl p-8 text-center cursor-pointer hover:bg-base-200 transition-all duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 15l-3-3m0 0l3-3m-3 3h12" />
+                </svg>
+                <span class="text-sm opacity-60">Trascina un file o clicca per selezionare</span>
+              </div>
+
+              <input type="file" id="fileInput" class="hidden" />
+              
+              <div id="file-info-section" class="w-full hidden">
+                <div class="bg-base-200 rounded-xl p-4 mb-4">
+                  <h3 class="font-medium mb-2">File Selezionato:</h3>
+                  <div id="file-details" class="text-sm opacity-70"></div>
+                </div>
+                <button type="button" id="send-btn" class="btn btn-accent w-full" onclick="sendFile()" disabled>
+                  Inizia Trasmissione
+                </button>
+              </div>
+              
+              <div id="code-section" class="w-full hidden">
+                <div class="bg-base-200 rounded-xl p-4 mb-4">
+                  <pre class="text-accent font-mono text-center tracking-wider"><code id="transfer-code"></code></pre>
+                </div>
+                <button type="button" class="btn btn-accent w-full" onclick="copyCode()">
+                  Copia Codice
+                </button>
+              </div>
+
+              <div id="send-status" class="mt-4"></div>
+              <div id="send-progress" class="w-full mt-4 hidden">
+                <progress class="progress progress-accent w-full"></progress>
+              </div>
+            </div>
+            
+            <!-- Receive Tab -->
+            <div id="receive-tab" class="w-full hidden">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2">Codice di sincronizzazione</label>
+                  <input type="text" id="receive-code" placeholder="es: 7-guitar-horse" maxlength="50" class="input input-bordered w-full" />
+                </div>
+                <button type="button" class="btn btn-accent w-full" onclick="connectToSender()">
+                  Connetti al Wormhole
+                </button>
+                <div id="receive-status"></div>
+                <div id="receive-progress" class="w-full hidden">
+                  <progress class="progress progress-accent w-full"></progress>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // Global tab switching function
+      function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(btn => btn.classList.remove("tab-active"));
+        document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add("tab-active");
+        
+        document.getElementById('send-tab').classList.toggle('hidden', tab !== 'send');
+        document.getElementById('receive-tab').classList.toggle('hidden', tab !== 'receive');
+      }
+    </script>
+    
+    <script type="module">
+      import { WormholeCore } from "./src/core.js";
+
+      // --- Config ---
+      const RELAY_URL = "http://localhost:8765";
+      const AUTH_TOKEN = "S3RVER";
+
+      // --- DOM Elements ---
+      const fileInputElement = document.getElementById("fileInput");
+      const sendBtn = document.getElementById("send-btn");
+      const transferCodeDisplay = document.getElementById("transfer-code");
+      const codeSection = document.getElementById("code-section");
+      const receiveCodeInput = document.getElementById("receive-code");
+      const fileInfoSection = document.getElementById("file-info-section");
+      const fileDetailsDiv = document.getElementById("file-details");
+      const sendPrompt = document.getElementById("send-prompt");
+
+      // --- State ---
+      let selectedFile = null;
+      let transferInProgress = false;
+      let currentCode = null;
+
+      // --- UI Functions ---
+      function showStatus(tab, type, message) {
+        const statusEl = document.getElementById(`${tab}-status`);
+        const alertType = type === 'error' ? 'alert-error' : (type === 'success' ? 'alert-success' : 'alert-info');
+        statusEl.innerHTML = `
+          <div class="alert ${alertType} shadow-lg mt-4 text-sm p-3">
+            <span>${message}</span>
+          </div>
+        `;
+        statusEl.style.display = "block";
+      }
+
+      function updateProgress(tab, progress) {
+        const progressBar = document.getElementById(`${tab}-progress`);
+        const progressFill = document.querySelectorAll(`#${tab}-tab .progress`);
+        progressBar.style.display = "block";
+        progressFill.forEach(p => p.value = progress);
+      }
+
+      function copyCode() {
+        navigator.clipboard.writeText(currentCode).then(() => {
+          showStatus("send", "info", "📋 Codice copiato negli appunti!");
+        });
+      }
+      
+      function resetSendTab() {
+        sendPrompt.style.display = 'flex';
+        fileInfoSection.style.display = 'none';
+        codeSection.style.display = 'none';
+        if(sendBtn) sendBtn.disabled = true;
+        fileInputElement.value = "";
+        selectedFile = null;
+        document.getElementById("send-status").innerHTML = "";
+        document.getElementById("send-progress").style.display = 'none';
+      }
+
+      function resetUI() {
+        transferInProgress = false;
+        currentCode = null;
+        resetSendTab();
+
+        receiveCodeInput.value = "";
+        document.getElementById("receive-status").innerHTML = "";
+        document.getElementById("receive-progress").style.display = 'none';
+
+        switchTab("send");
+      }
+
+      Gun.on("opt", function (ctx) {
+        if (ctx.once) { return; }
+        ctx.on("out", function (msg) {
+          const to = this.to;
+          msg.headers = { ...msg.headers, token: "S3RVER" };
+          to.next(msg);
+        });
+      });
+
+      // --- Core Logic ---
+      let gun = new Gun({
+        peers: [
+         "http://localhost:8765/gun",
+         "https://peer.wallie.io/gun",
+         "https://gun-manhattan.herokuapp.com/gun",
+        ],
+        localStorage: false,
+      });
+      gun = gun.get("shogun-wormhole");
+
+      const wormhole = new WormholeCore({
+        gun,
+        onStatusChange: handleStatusChange,
+        onProgress: handleProgress,
+      });
+
+      function handleStatusChange({ code, status, message, metadata, fileData }) {
+        const activeTab = document.querySelector('.tab-active').getAttribute('onclick').match(/'([^']+)'/)[1];
+        switch (status) {
+          case "uploading": showStatus("send", "info", `📡 ${message}`); break;
+          case "pinning": showStatus("send", "info", `📌 ${message}`); break;
+          case "sent": showStatus("send", "success", `✅ ${message}`); break;
+          case "completed": showStatus(activeTab, "success", `🎉 ${message}`); setTimeout(resetUI, 4000); break;
+          case 'unpinning': showStatus('send', 'info', `🗑️ ${message}`); break;
+          case 'unpinned': showStatus('send', 'success', `✅ ${message}`); break;
+          case 'info': showStatus(activeTab, 'info', `ℹ️ ${message}`); break;
+          case "error": showStatus(activeTab, "error", `❌ ${message}`); transferInProgress = false; if (activeTab === 'send' && sendBtn) sendBtn.disabled = false; break;
+          case "connecting": showStatus("receive", "info", `🔍 ${message}`); break;
+          case "downloading": showStatus("receive", "info", `📥 Trovato: ${metadata.filename} (${(metadata.size / 1024 / 1024).toFixed(2)} MB). Download in corso...`); break;
+          case "downloaded": downloadBlob(fileData.blob, fileData.filename); showStatus("receive", "success", "🎉 File scaricato con successo!"); transferInProgress = false; break;
+        }
+      }
+
+      function handleProgress({ progress }) {
+        const activeTab = document.querySelector('.tab-active').getAttribute('onclick').match(/'([^']+)'/)[1];
+        updateProgress(activeTab, progress);
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function handleFileSelect(file) {
+        if (!file) return;
+        selectedFile = file;
+        
+        sendPrompt.style.display = 'none';
+        fileInfoSection.style.display = 'block';
+        if(sendBtn) sendBtn.disabled = false;
+
+        fileDetailsDiv.innerHTML = `
+            <div><strong>Nome:</strong> ${file.name}</div>
+            <div class="mt-1"><strong>Dimensione:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+            <div class="mt-1"><strong>Tipo:</strong> ${file.type || "Sconosciuto"}</div>`;
+      }
+
+      async function sendFile() {
+        if (!selectedFile || transferInProgress) return;
+        transferInProgress = true;
+        if(sendBtn) sendBtn.disabled = true;
+
+        try {
+          const sentCode = await wormhole.send({
+              file: selectedFile,
+              filename: selectedFile.name,
+              size: selectedFile.size,
+              type: selectedFile.type,
+              relayUrl: RELAY_URL,
+              authToken: AUTH_TOKEN,
+          });
+          currentCode = sentCode;
+          transferCodeDisplay.textContent = currentCode;
+          codeSection.style.display = "block";
+          fileInfoSection.style.display = 'none';
+        } catch (error) {
+            showStatus("send", "error", `❌ Upload fallito: ${error.message}`);
+            transferInProgress = false;
+            if(sendBtn) sendBtn.disabled = false;
+        }
+      }
+
+      function connectToSender() {
+        const code = receiveCodeInput.value.trim();
+        if (!code) { showStatus("receive", "error", "Per favore, inserisci un codice di sincronizzazione."); return; }
+        if (transferInProgress) { showStatus("receive", "info", "Un altro trasferimento è già in corso. Attendi il completamento."); return; }
+        transferInProgress = true;
+        wormhole.receive(code, RELAY_URL);
+      }
+
+      // --- Event Listeners ---
+      const sendTabDiv = document.getElementById('send-tab');
+      sendTabDiv.addEventListener('click', (e) => {
+        // Clicks on the prompt (or its children) should trigger the file input
+        if (!selectedFile && e.target.closest('#send-prompt')) {
+             fileInputElement.click();
+        }
+      });
+      fileInputElement.addEventListener("change", (e) => handleFileSelect(e.target.files[0]));
+      
+      sendTabDiv.addEventListener("dragover", (e) => { e.preventDefault(); if (!selectedFile) sendTabDiv.classList.add("bg-base-content/5"); });
+      sendTabDiv.addEventListener("dragleave", () => sendTabDiv.classList.remove("bg-base-content/5"));
+      sendTabDiv.addEventListener("drop", (e) => {
+        e.preventDefault();
+        sendTabDiv.classList.remove("bg-base-content/5");
+        if (!selectedFile && e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+      });
+
+      // --- Global Functions ---
+      window.sendFile = sendFile;
+      window.connectToSender = connectToSender;
+      window.copyCode = copyCode;
+      
+      // Initial UI setup
+      resetUI();
+    </script>
+  </body>
+</html>
