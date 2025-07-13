@@ -196,6 +196,21 @@
       const RELAY_URL = "http://localhost:8765";
       const AUTH_TOKEN = "S3RVER";
 
+      // Aggiungi verifica del relay
+      async function checkRelayStatus() {
+        try {
+          const response = await fetch(`${RELAY_URL}/health`);
+          if (!response.ok) {
+            showStatus("send", "error", "❌ Il relay IPFS non è raggiungibile. Verifica che il server sia in esecuzione.");
+            return false;
+          }
+          return true;
+        } catch (error) {
+          showStatus("send", "error", "❌ Impossibile connettersi al relay IPFS. Verifica la tua connessione.");
+          return false;
+        }
+      }
+
       // --- DOM Elements ---
       const fileInputElement = document.getElementById("fileInput");
       const sendBtn = document.getElementById("send-btn");
@@ -329,20 +344,68 @@
 
       function handleFileSelect(file) {
         if (!file) return;
+        
+        // Verifica dimensione massima (100MB)
+        const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+        if (file.size > MAX_FILE_SIZE) {
+          showStatus("send", "error", "❌ File troppo grande. Il limite è 100MB.");
+          return;
+        }
+
         selectedFile = file;
         
         sendPrompt.style.display = 'none';
         fileInfoSection.style.display = 'block';
         if(sendBtn) sendBtn.disabled = false;
 
+        // Aggiungi icona in base al tipo di file
+        const getFileIcon = (type) => {
+          if (type.startsWith('image/')) return '🖼️';
+          if (type.startsWith('video/')) return '🎥';
+          if (type.startsWith('audio/')) return '🎵';
+          if (type.startsWith('text/')) return '📄';
+          if (type.includes('pdf')) return '📑';
+          return '📁';
+        };
+
+        const icon = getFileIcon(file.type);
+        const formattedSize = (size) => {
+          const units = ['B', 'KB', 'MB', 'GB'];
+          let i = 0;
+          while (size >= 1024 && i < units.length - 1) {
+            size /= 1024;
+            i++;
+          }
+          return `${size.toFixed(1)} ${units[i]}`;
+        };
+
         fileDetailsDiv.innerHTML = `
-            <div><strong>Nome:</strong> ${file.name}</div>
-            <div class="mt-1"><strong>Dimensione:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</div>
-            <div class="mt-1"><strong>Tipo:</strong> ${file.type || "Sconosciuto"}</div>`;
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">${icon}</span>
+              <strong class="text-accent">${file.name}</strong>
+            </div>
+            <div class="mt-2 text-sm text-gray-400">
+              <div class="flex items-center gap-2">
+                <span>📏 Dimensione: ${formattedSize(file.size)}</span>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span>📋 Tipo: ${file.type || "Sconosciuto"}</span>
+              </div>
+            </div>`;
+
+        // Aggiungi animazione di successo
+        showStatus("send", "success", "✅ File selezionato con successo!");
+        setTimeout(() => {
+          document.getElementById("send-status").innerHTML = "";
+        }, 3000);
       }
 
       async function sendFile() {
         if (!selectedFile || transferInProgress) return;
+        
+        // Verifica stato del relay prima di procedere
+        if (!await checkRelayStatus()) return;
+        
         transferInProgress = true;
         if(sendBtn) sendBtn.disabled = true;
 
@@ -374,22 +437,44 @@
         wormhole.receive(code, RELAY_URL);
       }
 
+      // Aggiungi feedback visivo per il drag and drop
+      function updateDropZoneStyle(isActive) {
+        const dropZone = document.getElementById('send-prompt');
+        if (isActive) {
+          dropZone.classList.add('bg-accent', 'bg-opacity-10');
+        } else {
+          dropZone.classList.remove('bg-accent', 'bg-opacity-10');
+        }
+      }
+
       // --- Event Listeners ---
       const sendTabDiv = document.getElementById('send-tab');
       sendTabDiv.addEventListener('click', (e) => {
         // Clicks on the prompt (or its children) should trigger the file input
         if (!selectedFile && e.target.closest('#send-prompt')) {
-             fileInputElement.click();
+          fileInputElement.click();
+          // Aggiungi feedback visivo
+          updateDropZoneStyle(true);
+          setTimeout(() => updateDropZoneStyle(false), 200);
         }
       });
       fileInputElement.addEventListener("change", (e) => handleFileSelect(e.target.files[0]));
       
-      sendTabDiv.addEventListener("dragover", (e) => { e.preventDefault(); if (!selectedFile) sendTabDiv.classList.add("bg-base-content/5"); });
-      sendTabDiv.addEventListener("dragleave", () => sendTabDiv.classList.remove("bg-base-content/5"));
+      sendTabDiv.addEventListener("dragover", (e) => { 
+        e.preventDefault(); 
+        if (!selectedFile) {
+          updateDropZoneStyle(true);
+        }
+      });
+      
+      sendTabDiv.addEventListener("dragleave", () => updateDropZoneStyle(false));
+      
       sendTabDiv.addEventListener("drop", (e) => {
         e.preventDefault();
-        sendTabDiv.classList.remove("bg-base-content/5");
-        if (!selectedFile && e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+        updateDropZoneStyle(false);
+        if (!selectedFile && e.dataTransfer.files.length > 0) {
+          handleFileSelect(e.dataTransfer.files[0]);
+        }
       });
 
       // --- Global Functions ---

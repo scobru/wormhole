@@ -49,29 +49,62 @@ export class WormholeCore {
       message: `Caricamento di ${filename} sul relay IPFS...`
     });
 
+    // Verifica connessione al relay
+    try {
+      const healthCheck = await fetch(`${relayUrl}/health`);
+      if (!healthCheck.ok) {
+        throw new Error('Relay IPFS non raggiungibile');
+      }
+    } catch (error) {
+      this.onStatusChange({
+        code,
+        status: 'error',
+        message: `Errore di connessione al relay IPFS: ${error.message}`
+      });
+      throw error;
+    }
+
     // 1. Upload file to IPFS via the relay server
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const response = await fetch(`${relayUrl}/ipfs-upload`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${authToken}`
-        },
-        body: formData,
-    });
+      const response = await fetch(`${relayUrl}/ipfs-upload`, {
+          method: 'POST',
+          headers: {
+              'Authorization': `Bearer ${authToken}`
+          },
+          body: formData,
+      });
 
-    if (!response.ok) {
-        const errorResult = await response.json().catch(() => ({ error: 'Upload failed with status ' + response.status }));
-        throw new Error(errorResult.error || 'IPFS upload failed');
-    }
+      if (!response.ok) {
+          let errorMessage = 'Upload fallito';
+          try {
+              const errorResult = await response.json();
+              errorMessage = errorResult.error || `Upload fallito (${response.status})`;
+          } catch {
+              errorMessage = `Upload fallito con status ${response.status}`;
+          }
+          this.onStatusChange({
+            code,
+            status: 'error',
+            message: errorMessage
+          });
+          throw new Error(errorMessage);
+      }
 
-    const result = await response.json();
-    if (!result.success || !result.file?.hash) {
-        throw new Error(result.error || 'Invalid response from IPFS upload endpoint');
-    }
-    
-    const ipfsHash = result.file.hash;
+      const result = await response.json();
+      if (!result.success || !result.file?.hash) {
+          const errorMessage = result.error || 'Risposta non valida dal relay IPFS';
+          this.onStatusChange({
+            code,
+            status: 'error',
+            message: errorMessage
+          });
+          throw new Error(errorMessage);
+      }
+      
+      const ipfsHash = result.file.hash;
 
     this.onStatusChange({
       code,
