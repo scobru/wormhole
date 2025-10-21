@@ -190,11 +190,11 @@
     </script>
     
     <script type="module">
-      import { WormholeCore } from "./src/core.js";
+      import { WormholeCore } from "../src/core.js";
 
       // --- Config ---
-      const RELAY_URL = "http://localhost:8765";
-      const AUTH_TOKEN = "S3RVER";
+      const RELAY_URL = "https://shogunnode.scobrudot.dev";
+      const AUTH_TOKEN = "shogun2025";
 
       // Aggiungi verifica del relay
       async function checkRelayStatus() {
@@ -286,9 +286,9 @@
       // --- Core Logic ---
       let gun = new Gun({
         peers: [
-         "http://localhost:8765/gun",
+         "https://shogunnode.scobrudot.dev/gun",
          "https://peer.wallie.io/gun",
-         "https://gun-manhattan.herokuapp.com/gun",
+         "https://lindanode.scobrudot.dev/gun",
         ],
         localStorage: false,
       });

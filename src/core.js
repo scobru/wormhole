@@ -6,14 +6,36 @@ const CHUNK_SIZE = 65536; // 64KB chunks
  * @returns {string} The generated code, e.g., "7-brave-fire".
  */
 function generateCode() {
-    const adjectives = ['quick', 'lazy', 'happy', 'bright', 'calm', 'wild', 'gentle', 'brave', 'clever', 'kind'];
-    const nouns = ['cat', 'dog', 'bird', 'fish', 'tree', 'star', 'moon', 'rock', 'wave', 'fire'];
-    const numbers = Math.floor(Math.random() * 100);
-    
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    
-    return `${numbers}-${adj}-${noun}`;
+  const adjectives = [
+    'quick',
+    'lazy',
+    'happy',
+    'bright',
+    'calm',
+    'wild',
+    'gentle',
+    'brave',
+    'clever',
+    'kind',
+  ];
+  const nouns = [
+    'cat',
+    'dog',
+    'bird',
+    'fish',
+    'tree',
+    'star',
+    'moon',
+    'rock',
+    'wave',
+    'fire',
+  ];
+  const numbers = Math.floor(Math.random() * 100);
+
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+
+  return `${numbers}-${adj}-${noun}`;
 }
 
 /**
@@ -22,13 +44,12 @@ function generateCode() {
  * @returns {string[]} An array of base64 chunks.
  */
 function base64ToChunks(base64Data) {
-    const chunks = [];
-    for (let i = 0; i < base64Data.length; i += CHUNK_SIZE) {
-        chunks.push(base64Data.substring(i, i + CHUNK_SIZE));
-    }
-    return chunks;
+  const chunks = [];
+  for (let i = 0; i < base64Data.length; i += CHUNK_SIZE) {
+    chunks.push(base64Data.substring(i, i + CHUNK_SIZE));
+  }
+  return chunks;
 }
-
 
 export class WormholeCore {
   constructor(options = {}) {
@@ -46,7 +67,7 @@ export class WormholeCore {
     this.onStatusChange({
       code,
       status: 'uploading',
-      message: `Caricamento di ${filename} sul relay IPFS...`
+      message: `Caricamento di ${filename} sul relay IPFS...`,
     });
 
     // Verifica connessione al relay
@@ -59,7 +80,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: 'error',
-        message: `Errore di connessione al relay IPFS: ${error.message}`
+        message: `Errore di connessione al relay IPFS: ${error.message}`,
       });
       throw error;
     }
@@ -69,151 +90,196 @@ export class WormholeCore {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${relayUrl}/ipfs-upload`, {
-          method: 'POST',
-          headers: {
-              'Authorization': `Bearer ${authToken}`
-          },
-          body: formData,
+      const response = await fetch(`${relayUrl}/api/v1/ipfs/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: formData,
       });
 
       if (!response.ok) {
-          let errorMessage = 'Upload fallito';
-          try {
-              const errorResult = await response.json();
-              errorMessage = errorResult.error || `Upload fallito (${response.status})`;
-          } catch {
-              errorMessage = `Upload fallito con status ${response.status}`;
-          }
-          this.onStatusChange({
-            code,
-            status: 'error',
-            message: errorMessage
-          });
-          throw new Error(errorMessage);
+        let errorMessage = 'Upload fallito';
+        try {
+          const errorResult = await response.json();
+          errorMessage =
+            errorResult.error || `Upload fallito (${response.status})`;
+        } catch {
+          errorMessage = `Upload fallito con status ${response.status}`;
+        }
+        this.onStatusChange({
+          code,
+          status: 'error',
+          message: errorMessage,
+        });
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
       if (!result.success || !result.file?.hash) {
-          const errorMessage = result.error || 'Risposta non valida dal relay IPFS';
-          this.onStatusChange({
-            code,
-            status: 'error',
-            message: errorMessage
-          });
-          throw new Error(errorMessage);
-      }
-      
-      const ipfsHash = result.file.hash;
-
-    this.onStatusChange({
-      code,
-      status: 'pinning',
-      message: `File aggiunto a IPFS. In attesa della conferma del pin...`
-    });
-
-    // 2. Save metadata (including the IPFS hash) to Gun
-    const transferData = {
-      filename: filename,
-      size: size,
-      type: type,
-      ipfsHash: ipfsHash,
-      createdAt: Date.now() // For the Garbage Collector
-    };
-    // Also add to a central index for the GC to find it
-    this.gun.get('shogun-wormhole').get('wormhole-transfers').get(code).put({ createdAt: transferData.createdAt });
-    
-    // Store metadata under the generated code
-    this.gun.get(code).put(transferData);
-    
-    this.onStatusChange({
-      code,
-      status: 'sent',
-      message: 'File disponibile. Condividi il codice per iniziare il download.'
-    });
-
-    // Monitor for completion to unpin
-    const completionHandler = async (data) => {
-      if (data && data.status === 'completed') {
-        this.gun.get(`${code}-received`).off(completionHandler);
-
+        const errorMessage =
+          result.error || 'Risposta non valida dal relay IPFS';
         this.onStatusChange({
           code,
-          status: 'completed',
-          message: 'Trasferimento completato dal ricevente!'
+          status: 'error',
+          message: errorMessage,
         });
+        throw new Error(errorMessage);
+      }
 
-        try {
-            this.onStatusChange({ code, status: 'unpinning', message: 'Tentativo di unpin da IPFS per pulizia...' });
-            
-            const unpinResponse = await fetch(`${relayUrl}/pins/rm`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ cid: ipfsHash })
+      const ipfsHash = result.file.hash;
+
+      this.onStatusChange({
+        code,
+        status: 'pinning',
+        message: `File aggiunto a IPFS. In attesa della conferma del pin...`,
+      });
+
+      // 2. Save metadata (including the IPFS hash) to Gun
+      const transferData = {
+        filename: filename,
+        size: size,
+        type: type,
+        ipfsHash: ipfsHash,
+        createdAt: Date.now(), // For the Garbage Collector
+      };
+      // Also add to a central index for the GC to find it
+      this.gun
+        .get('shogun-wormhole')
+        .get('wormhole-transfers')
+        .get(code)
+        .put({ createdAt: transferData.createdAt });
+
+      // Store metadata under the generated code
+      this.gun.get(code).put(transferData);
+
+      this.onStatusChange({
+        code,
+        status: 'sent',
+        message:
+          'File disponibile. Condividi il codice per iniziare il download.',
+      });
+
+      // Monitor for completion to unpin
+      const completionHandler = async (data) => {
+        if (data && data.status === 'completed') {
+          this.gun.get(`${code}-received`).off(completionHandler);
+
+          this.onStatusChange({
+            code,
+            status: 'completed',
+            message: 'Trasferimento completato dal ricevente!',
+          });
+
+          try {
+            this.onStatusChange({
+              code,
+              status: 'unpinning',
+              message: 'Tentativo di unpin da IPFS per pulizia...',
+            });
+
+            const unpinResponse = await fetch(`${relayUrl}/api/v1/ipfs/pins/rm`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({ cid: ipfsHash }),
             });
 
             if (unpinResponse.ok) {
-                 const unpinResult = await unpinResponse.json();
-                 if (unpinResult.success) {
-                    this.onStatusChange({ code, status: 'unpinned', message: 'File rimosso da IPFS con successo.' });
-                 } else {
-                    throw new Error(unpinResult.error || 'Unpin fallito sul relay.');
-                 }
+              const unpinResult = await unpinResponse.json();
+              if (unpinResult.success) {
+                this.onStatusChange({
+                  code,
+                  status: 'unpinned',
+                  message: 'File rimosso da IPFS con successo.',
+                });
+              } else {
+                throw new Error(
+                  unpinResult.error || 'Unpin fallito sul relay.'
+                );
+              }
             } else {
-                 throw new Error(`Il relay ha risposto con errore ${unpinResponse.status}`);
+              throw new Error(
+                `Il relay ha risposto con errore ${unpinResponse.status}`
+              );
             }
-        } catch(e) {
-             console.error("Unpin failed:", e);
-             this.onStatusChange({ code, status: 'info', message: 'Cleanup non riuscito, il file verrà rimosso dal GC del nodo IPFS.' });
+          } catch (e) {
+            console.error('Unpin failed:', e);
+            this.onStatusChange({
+              code,
+              status: 'info',
+              message:
+                'Cleanup non riuscito, il file verrà rimosso dal GC del nodo IPFS.',
+            });
+          }
         }
-      }
-    };
-    this.gun.get(`${code}-received`).on(completionHandler);
+      };
+      this.gun.get(`${code}-received`).on(completionHandler);
 
-    return code;
+      return code;
+    } catch (error) {
+      console.error('Errore di upload:', error);
+      this.onStatusChange({ code, status: 'error', message: error.message });
+      throw error;
+    }
   }
 
   receive(code, relayUrl) {
-    this.onStatusChange({ code, status: 'connecting', message: `Ricerca del trasferimento: ${code}` });
+    this.onStatusChange({
+      code,
+      status: 'connecting',
+      message: `Ricerca del trasferimento: ${code}`,
+    });
 
     const onceWithTimeout = (gunNode, timeout = 10000) => {
-        return new Promise((resolve, reject) => {
-            const timer = setTimeout(() => {
-                gunNode.off(); // Clean up the listener
-                reject(new Error(`Timeout: Nessun dato ricevuto per il codice "${code}" dopo ${timeout / 1000}s. Controlla il codice e riprova.`));
-            }, timeout);
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          gunNode.off(); // Clean up the listener
+          reject(
+            new Error(
+              `Timeout: Nessun dato ricevuto per il codice "${code}" dopo ${timeout / 1000}s. Controlla il codice e riprova.`
+            )
+          );
+        }, timeout);
 
-            gunNode.once(data => {
-                clearTimeout(timer);
-                resolve(data);
-            });
+        gunNode.once((data) => {
+          clearTimeout(timer);
+          resolve(data);
         });
+      });
     };
 
     onceWithTimeout(this.gun.get(code))
       .then(async (metadata) => {
         if (!metadata || !metadata.ipfsHash) {
-          this.onStatusChange({ code, status: 'error', message: 'Codice non valido o trasferimento non trovato.' });
-        return;
-      }
+          this.onStatusChange({
+            code,
+            status: 'error',
+            message: 'Codice non valido o trasferimento non trovato.',
+          });
+          return;
+        }
 
-      this.onStatusChange({
-        code,
+        this.onStatusChange({
+          code,
           status: 'downloading',
           message: `Trovato: ${metadata.filename}. Download da IPFS in corso...`,
-        metadata
-      });
+          metadata,
+        });
 
         // 3. Download file from IPFS Gateway
         try {
-          const response = await fetch(`${relayUrl}/ipfs-content/${metadata.ipfsHash}`);
+          const response = await fetch(
+            `${relayUrl}/api/v1/ipfs/content/${metadata.ipfsHash}`
+          );
           if (!response.ok) {
-            throw new Error(`Impossibile scaricare dal gateway IPFS (status: ${response.status})`);
+            throw new Error(
+              `Impossibile scaricare dal gateway IPFS (status: ${response.status})`
+            );
           }
-          
+
           const contentLength = response.headers.get('content-length');
           const total = parseInt(contentLength, 10);
           let loaded = 0;
@@ -221,59 +287,65 @@ export class WormholeCore {
           const onProgress = this.onProgress;
 
           const stream = new ReadableStream({
-              start(controller) {
-                  const reader = response.body.getReader();
-                  function read() {
-                      reader.read().then(({ done, value }) => {
-                          if (done) {
-                              controller.close();
-                              return;
-                          }
-                          loaded += value.byteLength;
-                          if (total) {
-                              const progress = Math.round((loaded / total) * 100);
-                              onProgress({ progress, loaded, total });
-                          }
-                          controller.enqueue(value);
-                          read();
-                      }).catch(error => {
-                          console.error('Errore nello stream di lettura:', error);
-                          controller.error(error);
-                      });
-                  }
-                  read();
+            start(controller) {
+              const reader = response.body.getReader();
+              function read() {
+                reader
+                  .read()
+                  .then(({ done, value }) => {
+                    if (done) {
+                      controller.close();
+                      return;
+                    }
+                    loaded += value.byteLength;
+                    if (total) {
+                      const progress = Math.round((loaded / total) * 100);
+                      onProgress({ progress, loaded, total });
+                    }
+                    controller.enqueue(value);
+                    read();
+                  })
+                  .catch((error) => {
+                    console.error('Errore nello stream di lettura:', error);
+                    controller.error(error);
+                  });
               }
+              read();
+            },
           });
-          
+
           const blob = await new Response(stream).blob();
 
-                      this.onStatusChange({
-                        code,
-                        status: 'downloaded',
-                        message: 'File scaricato con successo.',
-                        fileData: {
-                blob: blob,
-                            filename: metadata.filename,
-                            type: metadata.type
-                        }
-                      });
-
-                      // Notify sender
-                      this.gun.get(`${code}-received`).put({
-                          status: 'completed',
-                          timestamp: Date.now()
-                      });
-
-        } catch (error) {
-            console.error("Errore di download:", error);
-            this.onStatusChange({ code, status: 'error', message: error.message });
-                  }
-      })
-      .catch(error => {
-        this.onStatusChange({ code, status: 'error', message: error.message });
+          this.onStatusChange({
+            code,
+            status: 'downloaded',
+            message: 'File scaricato con successo.',
+            fileData: {
+              blob: blob,
+              filename: metadata.filename,
+              type: metadata.type,
+            },
           });
+
+          // Notify sender
+          this.gun.get(`${code}-received`).put({
+            status: 'completed',
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.error('Errore di download:', error);
+          this.onStatusChange({
+            code,
+            status: 'error',
+            message: error.message,
+          });
+        }
+      })
+      .catch((error) => {
+        this.onStatusChange({ code, status: 'error', message: error.message });
+      });
   }
 }
 
 // Export utility functions for use in environment-specific code
-export { generateCode }; 
+export { generateCode };

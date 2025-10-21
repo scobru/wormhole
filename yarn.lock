@@ -639,9 +639,9 @@ graphemer@^1.4.0:
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
 gun@^0.2020.1242:
-  version "0.2020.1240"
-  resolved "https://registry.yarnpkg.com/gun/-/gun-0.2020.1240.tgz#759ad9a736bc41eaaa5801e0b83a9e106684e098"
-  integrity sha512-uhnyadZTywn0HHgBjS2DePqpcdwLeVm6nFeSZZBPJRltm9O8MjFPyltaxk2PBKS+O8wSZac9qlbCIriJDgQQog==
+  version "0.2020.1241"
+  resolved "https://registry.yarnpkg.com/gun/-/gun-0.2020.1241.tgz#a43de6faf046d2a9b89d1b532a9346b88a90f1ee"
+  integrity sha512-rmGqLuJj4fAuZ/0lddCvXHbENPkEnBOBYpq+kXHrwQ5RdNtQ5p0Io99lD1qUXMFmtwNacQ/iqo3VTmjmMyAYZg==
   dependencies:
     ws "^7.2.1"
   optionalDependencies:
