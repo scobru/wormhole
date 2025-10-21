@@ -151,7 +151,14 @@ export class WormholeCore {
         .put({ createdAt: transferData.createdAt });
 
       // Store metadata under the generated code
-      this.gun.get(code).put(transferData);
+      this.gun.get(code).put(transferData, (ack) => {
+        console.log('✅ Dati salvati su Gun per codice:', code, 'Ack:', ack);
+      });
+
+      // Verifica immediata che i dati siano stati salvati
+      this.gun.get(code).once((savedData) => {
+        console.log('🔍 Verifica dati salvati:', savedData);
+      });
 
       this.onStatusChange({
         code,
@@ -215,10 +222,10 @@ export class WormholeCore {
             });
           }
         }
-      };
-      this.gun.get(`${code}-received`).on(completionHandler);
-
-      return code;
+        };
+        this.gun.get(`${code}-received`).on(completionHandler);
+  
+        return code;
     } catch (error) {
       console.error('Errore di upload:', error);
       this.onStatusChange({ code, status: 'error', message: error.message });
@@ -227,30 +234,47 @@ export class WormholeCore {
   }
 
   receive(code, relayUrl) {
+    console.log('🔍 Inizio receive per codice:', code);
+    
     this.onStatusChange({
       code,
       status: 'connecting',
       message: `Ricerca del trasferimento: ${code}`,
     });
 
-    const onceWithTimeout = (gunNode, timeout = 10000) => {
+    const onceWithTimeout = (gunNode, timeout = 30000) => {
       return new Promise((resolve, reject) => {
+        console.log('⏱️ Attendo dati da Gun per:', code);
+        let dataReceived = false;
+        
         const timer = setTimeout(() => {
-          gunNode.off(); // Clean up the listener
-          reject(
-            new Error(
-              `Timeout: Nessun dato ricevuto per il codice "${code}" dopo ${timeout / 1000}s. Controlla il codice e riprova.`
-            )
-          );
+          if (!dataReceived) {
+            console.log('❌ TIMEOUT: Nessun dato ricevuto per:', code);
+            gunNode.off(); // Clean up the listener
+            reject(
+              new Error(
+                `Timeout: Nessun dato ricevuto per il codice "${code}" dopo ${timeout / 1000}s. Controlla il codice e riprova.`
+              )
+            );
+          }
         }, timeout);
 
-        gunNode.once((data) => {
-          clearTimeout(timer);
-          resolve(data);
-        });
+        // Usa .on() invece di .once() per continuare ad ascoltare
+        const listener = (data, key) => {
+          console.log('📦 Dati ricevuti da Gun:', data, 'Key:', key);
+          if (data && data.ipfsHash && !dataReceived) {
+            dataReceived = true;
+            clearTimeout(timer);
+            gunNode.off(listener); // Rimuovi il listener
+            resolve(data);
+          }
+        };
+        
+        gunNode.on(listener);
       });
     };
 
+    console.log('🔍 Cerco dati su Gun node:', this.gun.get(code));
     onceWithTimeout(this.gun.get(code))
       .then(async (metadata) => {
         if (!metadata || !metadata.ipfsHash) {
