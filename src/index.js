@@ -27,13 +27,13 @@ class GunWormholeCLI {
     this.spinner = ora();
     
     // The relay used for IPFS upload/download and Gun sync
-    this.relayUrl = 'wss://ruling-mastodon-improved.ngrok-free.app';
+    this.relayUrl = 'https://5eh4twk2f62autunsje4panime.srv.us';
     this.authToken = 'shogun2025'; // Token for privileged operations like upload
     
     const gun = Gun({
         peers: [
             `${this.relayUrl}/gun`, // Main relay
-            'wss://gun-manhattan.herokuapp.com/gun',
+            'wss://5eh4twk2f62autunsje4panime.srv.us/gun',
         ],
         localStorage: false,
     });
