@@ -7,6 +7,10 @@
     
     <!-- Tailwind CSS Production CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+
+    <!-- GunJS Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     
     <!-- Shogun Core -->
     <script src="../shogun-core/dist/browser/shogun-core.js"></script>
@@ -52,28 +56,55 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             // --- INIZIALIZZAZIONE SHOGUN ---
-            const shogun = window.initShogun({
-                authToken: "shogun2025",
-                peers: ['https://gun-manhattan.herokuapp.com/gun', 'wss://ruling-mastodon-improved.ngrok-free.app/gun'],
-                scope: 'shogun',
+            const shogunNamespace = window.ShogunCore;
+            const gunFactory = window.Gun;
+
+            if (!shogunNamespace?.ShogunCore || typeof gunFactory !== 'function') {
+                console.error('Impossibile caricare Shogun Core o Gun.js', {
+                    hasShogun: Boolean(shogunNamespace?.ShogunCore),
+                    hasGun: typeof gunFactory === 'function'
+                });
+                return;
+            }
+
+            const peers = [
+                'https://5eh4twk2f62autunsje4panime.srv.us/gun',
+                'https://ojepkbvhx4ok25py2qw4hsa76y.srv.us/gun',
+                'https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun'
+            ];
+
+            const gunInstance = gunFactory({
+                peers,
+                localStorage: true,
+                radisk: true,
+                multicast: false
+            });
+
+            const { ShogunCore: ShogunCoreCtor, CorePlugins } = shogunNamespace;
+            const shogun = new ShogunCoreCtor({
+                gunInstance,
                 webauthn: {
                     enabled: true,
-                    // Configurazione WebAuthn
                     rpName: 'DevTip',
                     rpId: window.location.hostname,
                     userVerification: 'preferred'
                 },
                 web3: {
-                    enabled: true,
-                    // Configurazione Web3
-                    networks: ['ethereum'],
-                    providerUrl: 'https://mainnet.infura.io/v3/YOUR-PROJECT-ID' // Opzionale
+                    enabled: true
                 },
                 nostr: {
-                    enabled: true,
-
+                    enabled: true
                 }
             });
+
+            window.shogunCore = shogun;
+            window.CorePlugins = CorePlugins;
+
+            const PluginNames = {
+                Web3: CorePlugins?.Web3 ?? 'web3',
+                WebAuthn: CorePlugins?.WebAuthn ?? 'webauthn',
+                Nostr: CorePlugins?.Nostr ?? 'nostr'
+            };
 
             // Riferimenti agli elementi del DOM
             const views = {
@@ -174,7 +205,7 @@
             // Web3 (MetaMask) Authentication
             document.getElementById('metamask-auth').addEventListener('click', async () => {
                 try {
-                    const web3Plugin = shogun.getPlugin("web3");
+                    const web3Plugin = shogun.getPlugin(PluginNames.Web3);
                     if (!web3Plugin) {
                         throw new Error('Web3 plugin non disponibile');
                     }
@@ -201,7 +232,7 @@
             // WebAuthn Authentication
             document.getElementById('webauthn-auth').addEventListener('click', async () => {
                 try {
-                    const webauthn = shogun.getPlugin("webauthn");
+                    const webauthn = shogun.getPlugin(PluginNames.WebAuthn);
                     if (!webauthn) {
                         throw new Error('WebAuthn plugin non disponibile');
                     }
@@ -227,7 +258,7 @@
             // Nostr Authentication
             document.getElementById('nostr-auth').addEventListener('click', async () => {
                 try {
-                    const nostr = shogun.getPlugin("nostr");
+                    const nostr = shogun.getPlugin(PluginNames.Nostr);
                     if (!nostr) {
                         throw new Error('Nostr plugin non disponibile');
                     }
@@ -270,7 +301,7 @@
                     // Gestione specifica per tipo di autenticazione
                     switch (authMethod) {
                         case 'web3':
-                            const web3Plugin = shogun.getPlugin("web3");
+                            const web3Plugin = shogun.getPlugin(PluginNames.Web3);
                             if (web3Plugin) {
                                 // Usa il metodo corretto per ottenere l'indirizzo
                                 const connectionResult = await web3Plugin.connectMetaMask();
@@ -280,7 +311,7 @@
                             }
                             break;
                         case 'nostr':
-                            const nostrPlugin = shogun.getPlugin("nostr");
+                            const nostrPlugin = shogun.getPlugin(PluginNames.Nostr);
                             if (nostrPlugin) {
                                 const pubkey = await nostrPlugin.getPublicKey();
                                 if (pubkey) {
@@ -428,7 +459,7 @@
                     // Gestione specifica per tipo di autenticazione
                     switch (authMethod) {
                         case 'web3':
-                            const web3Plugin = shogun.getPlugin("web3");
+                            const web3Plugin = shogun.getPlugin(PluginNames.Web3);
                             if (web3Plugin) {
                                 const accounts = await web3Plugin.getAccounts();
                                 if (accounts && accounts.length > 0) {
@@ -437,7 +468,7 @@
                             }
                             break;
                         case 'nostr':
-                            const nostrPlugin = shogun.getPlugin("nostr");
+                            const nostrPlugin = shogun.getPlugin(PluginNames.Nostr);
                             if (nostrPlugin) {
                                 const pubkey = await nostrPlugin.getPublicKey();
                                 if (pubkey) {

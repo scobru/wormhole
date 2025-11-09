@@ -9,7 +9,7 @@
     
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles/wormhole.css">
+    <link rel="stylesheet" href="/styles/wormhole.css">
     <style>
       :root {
         --bg-gradient-dark: linear-gradient(180deg, #1a1240 0%, #0a0821 100%);
@@ -143,9 +143,12 @@
               </div>
               
               <div id="code-section" class="w-full hidden">
-                <div class="bg-base-200 rounded-xl p-4 mb-4">
+                <div class="bg-base-200 rounded-xl p-4 mb-2">
                   <pre class="text-accent font-mono text-center tracking-wider"><code id="transfer-code"></code></pre>
                 </div>
+                <p class="text-xs opacity-70 text-center px-2">
+                  Il codice è la chiave di decrittazione end-to-end. Condividilo solo con il destinatario previsto.
+                </p>
                 <button type="button" class="btn btn-accent w-full" onclick="copyCode()">
                   Copia Codice
                 </button>

@@ -56,6 +56,7 @@ class GunWormholeCLI {
             console.log(chalk.black.bgWhite(` ${code} `));
             console.log(chalk.gray(`\nComando per il ricevente:`));
             console.log(chalk.cyan(`gwh receive ${code}`));
+            console.log(chalk.yellow('\nQuesto codice è anche la chiave di decrittazione end-to-end. Mantienilo segreto.'));
             console.log(chalk.yellow('\n⏳ In attesa del ricevente...'));
             break;
         case 'completed':
