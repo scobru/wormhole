@@ -1,1 +1,0 @@
-[![Dona con Crypto](https://img.shields.io/badge/DevTip-Dona_Crypto-indigo?style=for-the-badge&logo=bitcoin)](http://127.0.0.1:3002/tip-container/app.html#/u/0xa6591dcdff5c7616110b4f84207184aef7835048)

@@ -27,11 +27,12 @@
     "clipboardy": "^4.0.0",
     "filesize": "^10.1.0",
     "gun": "^0.2020.1242",
-    "ora": "^8.0.1"
+    "ora": "^8.0.1",
+    "shogun-relays": "^1.0.4"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
     "prettier": "^3.2.5",
     "serve": "^14.2.1"
   }
-} 
+}

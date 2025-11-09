@@ -83,4 +83,5 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--pf));
-} 
+}
+
