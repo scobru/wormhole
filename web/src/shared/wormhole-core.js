@@ -234,6 +234,20 @@ async function deriveKeyFromCode(code, saltBytes, iterations = ENCRYPTION_CONFIG
 }
 
 async function encryptFileWithCode(file, code, fallbackName, fallbackLastModified) {
+  const normalizedFileName =
+    typeof file?.name === 'string' && file.name.trim()
+      ? file.name.trim()
+      : typeof fallbackName === 'string' && fallbackName.trim()
+        ? fallbackName.trim()
+        : 'file';
+
+  const lastModified =
+    typeof file?.lastModified === 'number'
+      ? file.lastModified
+      : typeof fallbackLastModified === 'number'
+        ? fallbackLastModified
+        : Date.now();
+
   const salt = crypto.getRandomValues(new Uint8Array(ENCRYPTION_CONFIG.saltLength));
   const iv = crypto.getRandomValues(new Uint8Array(ENCRYPTION_CONFIG.ivLength));
 
@@ -249,13 +263,32 @@ async function encryptFileWithCode(file, code, fallbackName, fallbackLastModifie
   );
 
   const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
-  const encryptedFilename = `${file.name}.enc`;
+  const encryptedFilename = `${normalizedFileName}.enc`;
+
+  let encryptedFile;
+  if (typeof File === 'function') {
+    encryptedFile = new File([encryptedBlob], encryptedFilename, {
+      type: 'application/octet-stream',
+      lastModified,
+    });
+  } else {
+    encryptedFile = new Blob([encryptedBlob], { type: 'application/octet-stream' });
+    try {
+      Object.defineProperty(encryptedFile, 'name', {
+        value: encryptedFilename,
+        configurable: true,
+      });
+    } catch {}
+    try {
+      Object.defineProperty(encryptedFile, 'lastModified', {
+        value: lastModified,
+        configurable: true,
+      });
+    } catch {}
+  }
 
   return {
-    encryptedFile: new File([encryptedBlob], encryptedFilename, {
-      type: 'application/octet-stream',
-      lastModified: file.lastModified,
-    }),
+    encryptedFile,
     encryptionMetadata: {
       version: 1,
       algorithm: ENCRYPTION_CONFIG.algorithm,
@@ -265,7 +298,7 @@ async function encryptFileWithCode(file, code, fallbackName, fallbackLastModifie
       keyLength: ENCRYPTION_CONFIG.keyLength,
       hash: ENCRYPTION_CONFIG.hash,
       encryptedFilename,
-      originalName: file.name,
+      originalName: normalizedFileName,
     },
   };
 }
@@ -354,7 +387,7 @@ export class WormholeCore {
     this.onProgress = options.onProgress || (() => {});
   }
 
-  async send({ file, filename, size, type, relayUrl, authToken }) {
+  async send({ file, filename, size, type, relayUrl, authToken, lastModified }) {
     const code = generateCode();
 
     this.onStatusChange({
@@ -388,7 +421,19 @@ export class WormholeCore {
         message: 'Cifratura del file in corso...',
       });
 
-      const encryptionResult = await encryptFileWithCode(file, code);
+      const fallbackLastModified =
+        typeof lastModified === 'number'
+          ? lastModified
+          : typeof file?.lastModified === 'number'
+            ? file.lastModified
+            : undefined;
+
+      const encryptionResult = await encryptFileWithCode(
+        file,
+        code,
+        filename,
+        fallbackLastModified
+      );
       encryptedFile = encryptionResult.encryptedFile;
       encryptionMetadata = encryptionResult.encryptionMetadata;
     } catch (error) {
@@ -410,7 +455,11 @@ export class WormholeCore {
       });
 
       const formData = new FormData();
-      formData.append('file', encryptedFile, encryptedFile.name);
+      const uploadFilename =
+        encryptedFile?.name ||
+        encryptionMetadata.encryptedFilename ||
+        `${filename || encryptionMetadata.originalName}.enc`;
+      formData.append('file', encryptedFile, uploadFilename);
 
       const response = await fetch(`${relayUrl}/api/v1/ipfs/upload`, {
         method: 'POST',

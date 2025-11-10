@@ -21,28 +21,76 @@ import Gun from 'gun';
 import { WormholeCore, WormholeStatus } from './core.js';
 import { forceListUpdate } from 'shogun-relays';
 
+const DEFAULT_PEERS = [
+  'https://5eh4twk2f62autunsje4panime.srv.us/gun',
+  'wss://5eh4twk2f62autunsje4panime.srv.us/gun',
+  'https://peer.wallie.io/gun',
+  'https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun',
+  'https://ojepkbvhx4ok25py2qw4hsa76y.srv.us/gun',
+];
+
+async function buildPeerList(relayUrl) {
+  const peerSet = new Set(DEFAULT_PEERS);
+
+  if (typeof relayUrl === 'string' && relayUrl.trim().length > 0) {
+    const sanitized = relayUrl.replace(/\/$/, '');
+    peerSet.add(`${sanitized}/gun`);
+
+    if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
+      const wssPeer = sanitized.replace(/^http/, 'ws');
+      peerSet.add(`${wssPeer}/gun`);
+    }
+  }
+
+  try {
+    const relays = await forceListUpdate();
+    const relayArray = Array.isArray(relays)
+      ? relays
+      : Array.isArray(relays?.relays)
+        ? relays.relays
+        : [];
+
+    relayArray.forEach((peer) => {
+      if (typeof peer === 'string' && peer.trim().length > 0) {
+        peerSet.add(peer.trim());
+      }
+    });
+  } catch (error) {
+    console.warn('Impossibile aggiornare la lista dei peer da shogun-relays:', error);
+  }
+
+  return Array.from(peerSet);
+}
+
 class GunWormholeCLI {
-  constructor() {
+  constructor({ gun, relayUrl, authToken }) {
     this.multicastAddress = '233.255.255.255';
     this.multicastPort = 8765;
     this.spinner = ora();
 
-    // The relay used for IPFS upload/download and Gun sync
-    this.relayUrl = 'https://5eh4twk2f62autunsje4panime.srv.us';
-    this.authToken = 'shogun2025'; // Token for privileged operations like upload
-
-    const relays = forceListUpdate();
-    const gun = Gun({
-      peers: [this.relayUrl],
-      localStorage: false,
-      radisk: true,
-    });
+    this.relayUrl = relayUrl;
+    this.authToken = authToken;
 
     this.wormhole = new WormholeCore({
       gun,
       onStatusChange: this.handleStatusChange.bind(this),
       onProgress: this.handleProgress.bind(this),
     });
+  }
+
+  static async create() {
+    const relayUrl = 'https://5eh4twk2f62autunsje4panime.srv.us';
+    const authToken = 'shogun2025';
+
+    const peers = await buildPeerList(relayUrl);
+
+    const gun = Gun({
+      peers,
+      localStorage: false,
+      radisk: false,
+    });
+
+    return new GunWormholeCLI({ gun, relayUrl, authToken });
   }
 
   handleStatusChange({ code, status, message, metadata, fileData }) {
@@ -171,6 +219,7 @@ class GunWormholeCLI {
         type: this.getMimeType(filePath),
         relayUrl: this.relayUrl,
         authToken: this.authToken,
+        lastModified: stats.mtimeMs,
       });
 
       this.spinner.succeed('File uploaded to IPFS!');
@@ -285,7 +334,7 @@ class GunWormholeCLI {
 // CLI Interface
 async function main() {
   const args = process.argv.slice(2);
-  const cli = new GunWormholeCLI();
+  const cli = await GunWormholeCLI.create();
 
   if (args.length === 0) {
     console.log(chalk.blue('🌌 GunDB Wormhole CLI'));

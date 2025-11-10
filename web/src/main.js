@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     "https://5eh4twk2f62autunsje4panime.srv.us/gun",
     "https://peer.wallie.io/gun",
     "https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us//gun",
+    "https://ojepkbvhx4ok25py2qw4hsa76y.srv.us/gun",
   ];
 
   const peerSet = new Set(defaultPeers);
@@ -55,14 +56,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  const gun = gunGlobal({
+  const gunInstance = gunGlobal({
     peers: Array.from(peerSet),
-    localStorage: true,
-    radisk: true,
-  }).get("shogun-wormhole");
+    localStorage: false,
+    radisk: false,
+  });
 
   const wormhole = new WormholeCore({
-    gun,
+    gun: gunInstance,
     onStatusChange: handleStatusChange,
     onProgress: handleProgress,
   });
@@ -235,6 +236,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         type: state.selectedFile.type,
         relayUrl: RELAY_URL,
         authToken: AUTH_TOKEN,
+        lastModified: state.selectedFile.lastModified,
       });
 
       state.currentCode = transferCode;
