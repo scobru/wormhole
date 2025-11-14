@@ -12,7 +12,7 @@
     "vite": "^5.4.8"
   },
   "dependencies": {
-    "shogun-relays": "^1.0.4",
+    "shogun-relays": "^1.0.5",
     "vercel": "^48.9.0"
   }
 }
