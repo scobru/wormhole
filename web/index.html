@@ -1,127 +1,154 @@
 <!DOCTYPE html>
 <html lang="it" data-theme="night">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🌌 SHOGUN WORMHOLE PROTOCOL</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gun/0.2020.1240/gun.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gun/0.2020.1240/lib/rindexed.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/styles/wormhole.css" />
-    <style>
-      :root {
-        --bg-gradient-dark: linear-gradient(180deg, #1a1240 0%, #0a0821 100%);
-        --color-accent: #4f6bf6;
-        --color-text: #ffffff;
-        --color-text-secondary: rgba(255, 255, 255, 0.6);
-        --color-input-bg: rgba(255, 255, 255, 0.05);
-        --color-input-border: rgba(255, 255, 255, 0.1);
-        --color-button: rgba(255, 255, 255, 0.1);
-      }
 
-      body {
-        background: var(--bg-gradient-dark);
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-        color: var(--color-text);
-        font-family: system-ui, -apple-system, sans-serif;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌌 SHOGUN WORMHOLE PROTOCOL</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gun/0.2020.1240/gun.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gun/0.2020.1240/lib/rindexed.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/styles/wormhole.css" />
+  <style>
+    :root {
+      --bg-gradient-dark: linear-gradient(180deg, #1a1240 0%, #0a0821 100%);
+      --color-accent: #4f6bf6;
+      --color-text: #ffffff;
+      --color-text-secondary: rgba(255, 255, 255, 0.6);
+      --color-input-bg: rgba(255, 255, 255, 0.05);
+      --color-input-border: rgba(255, 255, 255, 0.1);
+      --color-button: rgba(255, 255, 255, 0.1);
+    }
 
-      .card {
-        background-color: #151515;
-        border-radius: 24px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
-      }
+    body {
+      background: var(--bg-gradient-dark);
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
 
-      .file-drop-zone {
-        border: 2px dashed var(--color-input-border);
-        border-radius: 12px;
-        padding: 2rem;
-        text-align: center;
-        color: var(--color-text-secondary);
-        transition: all 0.2s ease;
-      }
+    .card {
+      background-color: #151515;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+    }
 
-      .file-drop-zone:hover {
-        border-color: var(--color-accent);
-        background-color: var(--color-input-bg);
-      }
-    </style>
-  </head>
-  <body class="antialiased">
-    <div class="min-h-screen flex items-center justify-center p-4">
-      <div class="card w-full max-w-sm">
-        <div class="p-8">
-          <div class="flex flex-col items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+    .file-drop-zone {
+      border: 2px dashed var(--color-input-border);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      color: var(--color-text-secondary);
+      transition: all 0.2s ease;
+    }
 
-            <h2 class="text-2xl font-semibold mb-2">Shogun Wormhole</h2>
-            <p class="text-base opacity-60 mb-8">Trasferimento file sicuro e privato</p>
+    .file-drop-zone:hover {
+      border-color: var(--color-accent);
+      background-color: var(--color-input-bg);
+    }
+  </style>
+</head>
 
-            <div class="tabs tabs-boxed bg-base-200 mb-8" data-tab-group="wormhole">
-              <button type="button" class="tab tab-active" data-tab-button="send">Trasmetti</button>
-              <button type="button" class="tab" data-tab-button="receive">Ricevi</button>
+<body class="antialiased">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="card w-full max-w-sm">
+      <div class="p-8">
+        <div class="flex flex-col items-center">
+          <img src="/logo.svg" alt="Shogun Logo" class="h-16 w-16 mb-4" />
+
+          <h2 class="text-2xl font-semibold mb-2">Shogun Wormhole</h2>
+          <p class="text-base opacity-60 mb-8">Trasferimento file sicuro e privato</p>
+
+          <div class="tabs tabs-boxed bg-base-200 mb-8" data-tab-group="wormhole">
+            <button type="button" class="tab tab-active" data-tab-button="send">Trasmetti</button>
+            <button type="button" class="tab" data-tab-button="receive">Ricevi</button>
+          </div>
+
+          <div id="send-tab" class="w-full space-y-4" data-tab-panel="send">
+            <div id="send-prompt"
+              class="file-drop-zone flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-base-200 transition-all duration-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-accent" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 15l-3-3m0 0l3-3m-3 3h12" />
+              </svg>
+              <span class="text-sm opacity-60 text-center">Trascina un file o clicca per selezionare</span>
             </div>
 
-            <div id="send-tab" class="w-full space-y-4" data-tab-panel="send">
-              <div
-                id="send-prompt"
-                class="file-drop-zone flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-base-200 transition-all duration-200"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 15l-3-3m0 0l3-3m-3 3h12" />
-                </svg>
-                <span class="text-sm opacity-60 text-center">Trascina un file o clicca per selezionare</span>
+            <input type="file" id="fileInput" class="hidden" />
+
+            <div id="file-info-section" class="w-full hidden">
+              <div class="bg-base-200 rounded-xl p-4 mb-4">
+                <h3 class="font-medium mb-2">File Selezionato:</h3>
+                <div id="file-details" class="text-sm opacity-70"></div>
               </div>
+              <button type="button" id="send-btn" class="btn btn-accent w-full" disabled>Inizia Trasmissione</button>
+            </div>
 
-              <input type="file" id="fileInput" class="hidden" />
-
-              <div id="file-info-section" class="w-full hidden">
-                <div class="bg-base-200 rounded-xl p-4 mb-4">
-                  <h3 class="font-medium mb-2">File Selezionato:</h3>
-                  <div id="file-details" class="text-sm opacity-70"></div>
-                </div>
-                <button type="button" id="send-btn" class="btn btn-accent w-full" disabled>Inizia Trasmissione</button>
+            <div id="code-section" class="w-full hidden">
+              <div class="bg-base-200 rounded-xl p-4 mb-2">
+                <pre class="text-accent font-mono text-center tracking-wider"><code id="transfer-code"></code></pre>
               </div>
+              <p class="text-xs opacity-70 text-center px-2">
+                Il codice è la chiave di decrittazione end-to-end. Condividilo solo con il destinatario previsto.
+              </p>
+              <button type="button" class="btn btn-accent w-full" data-action="copy-code">Copia Codice</button>
+            </div>
 
-              <div id="code-section" class="w-full hidden">
-                <div class="bg-base-200 rounded-xl p-4 mb-2">
-                  <pre class="text-accent font-mono text-center tracking-wider"><code id="transfer-code"></code></pre>
-                </div>
-                <p class="text-xs opacity-70 text-center px-2">
-                  Il codice è la chiave di decrittazione end-to-end. Condividilo solo con il destinatario previsto.
-                </p>
-                <button type="button" class="btn btn-accent w-full" data-action="copy-code">Copia Codice</button>
+            <div id="send-status" class="mt-4"></div>
+            <div id="send-progress" class="w-full hidden">
+              <progress class="progress progress-accent w-full" value="0" max="100"></progress>
+            </div>
+          </div>
+
+          <div id="receive-tab" class="w-full hidden" data-tab-panel="receive">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-2" for="receive-code">Codice di sincronizzazione</label>
+                <input type="text" id="receive-code" placeholder="es: 7-guitar-horse" maxlength="50"
+                  class="input input-bordered w-full" />
               </div>
-
-              <div id="send-status" class="mt-4"></div>
-              <div id="send-progress" class="w-full hidden">
+              <button type="button" class="btn btn-accent w-full" id="receive-btn">Connetti al Wormhole</button>
+              <div id="receive-status"></div>
+              <div id="receive-progress" class="w-full hidden">
                 <progress class="progress progress-accent w-full" value="0" max="100"></progress>
-              </div>
-            </div>
-
-            <div id="receive-tab" class="w-full hidden" data-tab-panel="receive">
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium mb-2" for="receive-code">Codice di sincronizzazione</label>
-                  <input type="text" id="receive-code" placeholder="es: 7-guitar-horse" maxlength="50" class="input input-bordered w-full" />
-                </div>
-                <button type="button" class="btn btn-accent w-full" id="receive-btn">Connetti al Wormhole</button>
-                <div id="receive-status"></div>
-                <div id="receive-progress" class="w-full hidden">
-                  <progress class="progress progress-accent w-full" value="0" max="100"></progress>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+  <footer class="mt-12 py-8 border-t border-gray-700 bg-base-200/50">
+    <div class="container mx-auto text-center px-4">
+      <p class="text-gray-400 mb-4">
+        <a href="https://github.com/scobru/shogun-wormhole" class="text-blue-500 hover:text-blue-400">
+          repo
+        </a>
+        
+        <a href="https://github.com/scobru/shogun-relay" class="text-blue-500 hover:text-blue-400">
+          relay
+        </a>
+        
+        build with ❤️ by
+        <a href="https://github.com/scobru" class="text-blue-500 hover:text-blue-400">
+          scobru
+        </a>
+      </p>
+      <p class="text-gray-400 mb-4">
+        part of
+        <a href="https://shogun-eco.xyz" class="text-blue-500 hover:text-blue-400">
+          shogun project
+        </a>
+      </p>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>
