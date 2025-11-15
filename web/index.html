@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="shogun-dark">
+<html lang="en" data-theme="shogun-dark">
 
 <head>
   <meta charset="UTF-8" />
@@ -39,11 +39,11 @@
           <img src="/logo.svg" alt="Shogun Logo" class="h-16 w-16 mb-4" />
 
           <h2 class="text-2xl font-semibold mb-2">Shogun Wormhole</h2>
-          <p class="text-base opacity-60 mb-8">Trasferimento file sicuro e privato</p>
+          <p class="text-base opacity-60 mb-8">Secure and private file transfer</p>
 
           <div class="tabs tabs-boxed bg-base-200 mb-8" data-tab-group="wormhole">
-            <button type="button" class="tab tab-active" data-tab-button="send">Trasmetti</button>
-            <button type="button" class="tab" data-tab-button="receive">Ricevi</button>
+            <button type="button" class="tab tab-active" data-tab-button="send">Send</button>
+            <button type="button" class="tab" data-tab-button="receive">Receive</button>
           </div>
 
           <div id="send-tab" class="w-full space-y-4" data-tab-panel="send">
@@ -54,17 +54,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M12 15l-3-3m0 0l3-3m-3 3h12" />
               </svg>
-              <span class="text-sm opacity-60 text-center">Trascina un file o clicca per selezionare</span>
+              <span class="text-sm opacity-60 text-center">Drag a file or click to select</span>
             </div>
 
             <input type="file" id="fileInput" class="hidden" />
 
             <div id="file-info-section" class="w-full hidden">
               <div class="bg-base-200 rounded-xl p-4 mb-4">
-                <h3 class="font-medium mb-2">File Selezionato:</h3>
+                <h3 class="font-medium mb-2">Selected File:</h3>
                 <div id="file-details" class="text-sm opacity-70"></div>
               </div>
-              <button type="button" id="send-btn" class="btn btn-accent w-full" disabled>Inizia Trasmissione</button>
+              <button type="button" id="send-btn" class="btn btn-accent w-full" disabled>Start Transfer</button>
             </div>
 
             <div id="code-section" class="w-full hidden">
@@ -72,9 +72,9 @@
                 <pre class="text-accent font-mono text-center tracking-wider"><code id="transfer-code"></code></pre>
               </div>
               <p class="text-xs opacity-70 text-center px-2">
-                Il codice è la chiave di decrittazione end-to-end. Condividilo solo con il destinatario previsto.
+                The code is the end-to-end encryption key. Share it only with the intended recipient.
               </p>
-              <button type="button" class="btn btn-accent w-full" data-action="copy-code">Copia Codice</button>
+              <button type="button" class="btn btn-accent w-full" data-action="copy-code">Copy Code</button>
             </div>
 
             <div id="send-status" class="mt-4"></div>
@@ -86,11 +86,11 @@
           <div id="receive-tab" class="w-full hidden" data-tab-panel="receive">
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium mb-2" for="receive-code">Codice di sincronizzazione</label>
-                <input type="text" id="receive-code" placeholder="es: 7-guitar-horse" maxlength="50"
+                <label class="block text-sm font-medium mb-2" for="receive-code">Sync Code</label>
+                <input type="text" id="receive-code" placeholder="e.g.: 7-guitar-horse" maxlength="50"
                   class="input input-bordered w-full" />
               </div>
-              <button type="button" class="btn btn-accent w-full" id="receive-btn">Connetti al Wormhole</button>
+              <button type="button" class="btn btn-accent w-full" id="receive-btn">Connect to Wormhole</button>
               <div id="receive-status"></div>
               <div id="receive-progress" class="w-full hidden">
                 <progress class="progress progress-accent w-full" value="0" max="100"></progress>
@@ -113,7 +113,7 @@
           relay
         </a>
         
-        build with ❤️ by
+        built with ❤️ by
         <a href="https://github.com/scobru" class="text-blue-500 hover:text-blue-400">
           scobru
         </a>
