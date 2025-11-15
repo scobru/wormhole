@@ -2495,6 +2495,11 @@ shogun-relays@^1.0.5:
     gun "^0.2020.1241"
     node-fetch "^3.1.0"
 
+shogun-theme@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/shogun-theme/-/shogun-theme-1.0.0.tgz#708af2d6147dc25cbb13c3dc22461fef7a236ba3"
+  integrity sha512-vrLSr/zNZjEZqsOIPB/l7yi775hoUkdyMSu1JGYsKorTIWf2u+F+yZ9FVKRrtkGx2L4r0O9g3Sk5PxHNPsMPbw==
+
 signal-exit@4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-4.0.2.tgz#ff55bb1d9ff2114c13b400688fa544ac63c36967"
