@@ -21,12 +21,15 @@ import Gun from 'gun';
 import { WormholeCore, WormholeStatus } from './core.js';
 import { forceListUpdate } from 'shogun-relays';
 
+const RELAY_URL = 'https://shogun-relay.scobrudot.dev' || process.env.VITE_RELAY_URL;
+const AUTH_TOKEN = 'PUT_YOUR_AUTH_TOKEN_HERE' || process.env.VITE_AUTH_TOKEN; 
+
 const DEFAULT_PEERS = [
-  'https://5eh4twk2f62autunsje4panime.srv.us/gun',
-  'wss://5eh4twk2f62autunsje4panime.srv.us/gun',
+  'https://gun.defucc.me/gun',
+  'https://a.talkflow.team/gun',
   'https://peer.wallie.io/gun',
-  'https://g3ru5bwxmezpuu3ktnoclbpiw4.srv.us/gun',
-  'https://ojepkbvhx4ok25py2qw4hsa76y.srv.us/gun',
+  'https://shogun-relay.scobrudot.dev/gun',
+  'https://shogun-linda-relay.scobrudot.dev/gun',
 ];
 
 async function buildPeerList(relayUrl) {
@@ -79,8 +82,8 @@ class GunWormholeCLI {
   }
 
   static async create() {
-    const relayUrl = 'https://5eh4twk2f62autunsje4panime.srv.us';
-    const authToken = 'shogun2025';
+    const relayUrl = RELAY_URL;
+    const authToken = AUTH_TOKEN;
 
     const peers = await buildPeerList(relayUrl);
 

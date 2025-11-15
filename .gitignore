@@ -29,5 +29,7 @@ server/radata*
 radata*
 server/node_modules*
 
+gun-relays/
+
 node_modules
 .vercel

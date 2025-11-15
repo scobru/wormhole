@@ -12,9 +12,9 @@
     "vite": "^5.4.8"
   },
   "dependencies": {
-    "shogun-onion": "^0.1.6",
-    "shogun-relays": "^1.0.5",
-    "shogun-theme": "^1.0.0",
+    "shogun-onion": "latest",
+    "shogun-relays": "latest",
+    "shogun-theme": "latest",
     "vercel": "^48.9.0"
   }
 }
