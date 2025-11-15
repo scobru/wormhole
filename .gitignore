@@ -30,3 +30,4 @@ radata*
 server/node_modules*
 
 node_modules
+.vercel

@@ -11,6 +11,14 @@ export default defineConfig({
       allow: [projectRoot],
     },
   },
+  optimizeDeps: {
+    // Prevent Vite from trying to prebundle these assets from shogun-onion
+    exclude: [
+      'shogun-onion',
+      'shogun-onion/onion.css',
+      'shogun-onion/onionring-widget.js',
+    ],
+  },
   resolve: {
     alias: {
       "@wormhole/core": fileURLToPath(new URL("./src/core-proxy.js", import.meta.url)),
