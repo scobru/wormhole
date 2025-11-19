@@ -25,9 +25,11 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "clipboardy": "^4.0.0",
+    "dotenv": "^17.2.3",
     "filesize": "^10.1.0",
     "gun": "^0.2020.1241",
-    "ora": "^8.0.1"
+    "ora": "^8.0.1",
+    "shogun-relays": "^1.0.8"
   },
   "devDependencies": {
     "eslint": "^8.57.0",

@@ -2493,10 +2493,10 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-onion@^0.1.12:
-  version "0.1.12"
-  resolved "https://registry.yarnpkg.com/shogun-onion/-/shogun-onion-0.1.12.tgz#ec9efe1c8db03d025e2c0b70cbfa23694973bf55"
-  integrity sha512-0EcPDhhAfSjySaXeU+CniDCzbD8Kv4Am12RJARjWDToW+/S5IclVNeZVqcRmo2JNVNDdT/BcSmeUzxm1HDXBnA==
+shogun-onion@^0.1.15:
+  version "0.1.15"
+  resolved "https://registry.yarnpkg.com/shogun-onion/-/shogun-onion-0.1.15.tgz#e254902c1656c564a7258ee882e19035ddda191c"
+  integrity sha512-FX8agOgHlu6kgM7eeiBgzvBfwettQr5z8PJ54htTL4WkmamWaD8/IzCgQ5jv22dZKlJywgC5cgoG9B61A4+CdA==
   dependencies:
     shogun-theme latest
     vercel "^48.10.2"

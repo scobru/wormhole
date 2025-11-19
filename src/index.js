@@ -21,8 +21,12 @@ import Gun from 'gun';
 import { WormholeCore, WormholeStatus } from './core.js';
 import { forceListUpdate } from 'shogun-relays';
 
-const RELAY_URL = 'https://shogun-relay.scobrudot.dev' || process.env.VITE_RELAY_URL;
-const AUTH_TOKEN = 'PUT_YOUR_AUTH_TOKEN_HERE' || process.env.VITE_AUTH_TOKEN; 
+import dotenv from 'dotenv';
+dotenv.config();
+
+const RELAY_URL =
+  process.env.VITE_RELAY_URL;
+const AUTH_TOKEN =  process.env.VITE_AUTH_TOKEN;
 
 const DEFAULT_PEERS = [
   'https://gun.defucc.me/gun',
@@ -59,7 +63,10 @@ async function buildPeerList(relayUrl) {
       }
     });
   } catch (error) {
-    console.warn('Impossibile aggiornare la lista dei peer da shogun-relays:', error);
+    console.warn(
+      'Impossibile aggiornare la lista dei peer da shogun-relays:',
+      error
+    );
   }
 
   return Array.from(peerSet);
@@ -338,6 +345,9 @@ class GunWormholeCLI {
 async function main() {
   const args = process.argv.slice(2);
   const cli = await GunWormholeCLI.create();
+
+  console.log('AUTH_TOKEN', process.env.VITE_AUTH_TOKEN);
+  console.log('RELAY_URL', process.env.VITE_RELAY_URL);
 
   if (args.length === 0) {
     console.log(chalk.blue('🌌 GunDB Wormhole CLI'));
