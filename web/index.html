@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="shogun-dark">
+<html lang="en" data-theme="dark">
 
 <head>
   <meta charset="UTF-8" />
@@ -14,31 +14,31 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/styles/wormhole.css" />
   <style>
-    /* Wormhole usa il tema Shogun condiviso tramite il file CSS */
+    /* Wormhole custom styles using DaisyUI dark theme */
     .file-drop-zone {
-      border: 2px dashed var(--input-border);
-      border-radius: var(--shogun-radius-md);
+      border: 2px dashed hsl(var(--bc) / 0.3);
+      border-radius: 0.5rem;
       padding: 2rem;
       text-align: center;
-      color: var(--text-secondary);
-      transition: all var(--shogun-transition-base);
+      color: hsl(var(--bc) / 0.7);
+      transition: all 0.2s ease;
     }
 
     .file-drop-zone:hover {
-      border-color: var(--shogun-accent);
-      background-color: var(--input-bg);
+      border-color: hsl(var(--a));
+      background-color: hsl(var(--b2));
     }
   </style>
 </head>
 
-<body class="antialiased">
-  <div class="min-h-screen flex items-center justify-center p-4">
+<body class="antialiased flex flex-col min-h-screen">
+  <div class="flex-1 flex items-center justify-center p-4">
     <div class="card w-full max-w-sm">
       <div class="p-8">
         <div class="flex flex-col items-center">
           <img src="/logo.svg" alt="Shogun Logo" class="h-16 w-16 mb-4" />
 
-          <h2 class="text-2xl font-semibold mb-2">Shogun Wormhole</h2>
+          <h2 class="text-2xl font-semibold mb-2">Wormhole</h2>
           <p class="text-base opacity-60 mb-8">Secure and private file transfer</p>
 
           <div class="tabs tabs-boxed bg-base-200 mb-8" data-tab-group="wormhole">
@@ -102,20 +102,46 @@
     </div>
   </div>
 
-  <div id="shogun-ring" style="margin-bottom: 2rem; text-align: center;"></div>
+  <footer class="w-full py-5 px-1 mt-auto">
+    <div class="w-full">
+      <ul class="menu menu-horizontal w-full">
+        <div class="flex justify-center items-center gap-2 text-sm w-full">
+          <div class="text-center">
+            <a href="https://github.com/scobru/shogun-wormhole" target="_blank" rel="noreferrer" class="link">
+              Fork me
+            </a>
+          </div>
+          <span>·</span>
+          <div class="flex justify-center items-center gap-2">
+            <p class="m-0 text-center">
+              Built with 
+              <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              at
+            </p>
+            <a
+              class="flex justify-center items-center gap-1"
+              href="https://shogun-eco.xyz/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span class="link">Shogun Ecosystem</span>
+            </a>
+            <span>·</span>
+            <span class="text-center">by <a href="https://github.com/scobru" target="_blank" rel="noreferrer" class="link">scobru</a></span>
+          </div>
+          <span>·</span>
+          <div class="text-center">
+            <a href="https://t.me/shogun_eco" target="_blank" rel="noreferrer" class="link">
+              Support
+            </a>
+          </div>
+        </div>
+      </ul>
+    </div>
+  </footer>
 
-  <script type="module">
-    import { mountOnionRing, sitesData } from 'shogun-onion';
-    import 'shogun-onion/onion.css';
-    // Mount the onion ring widget
-    mountOnionRing({
-      ringID: 'shogun-ring',
-      ringName: 'Shogun Network',
-      useIndex: true,
-      useRandom: true,
-      sitesData
-    }).catch((e) => console.error('Failed to mount onion ring:', e));
-  </script>
   <script type="module" src="/src/main.js"></script>
 </body>
 

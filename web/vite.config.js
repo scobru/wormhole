@@ -12,12 +12,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    // Prevent Vite from trying to prebundle these assets from shogun-onion
-    exclude: [
-      'shogun-onion',
-      'shogun-onion/onion.css',
-      'shogun-onion/onionring-widget.js',
-    ],
+    exclude: [],
   },
   resolve: {
     alias: {
