@@ -566,7 +566,7 @@ export class WormholeCore {
               message: 'Tentativo di unpin da IPFS per pulizia...',
             });
 
-            const unpinResponse = await fetch(`${relayUrl}/api/v1/ipfs/pins/rm`, {
+            const unpinResponse = await fetch(`${relayUrl}/api/v1/ipfs/pin/rm`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -686,7 +686,7 @@ export class WormholeCore {
 
         // 3. Download file from IPFS Gateway
         try {
-          const response = await fetch(`${relayUrl}/api/v1/ipfs/content/${metadata.ipfsHash}`);
+          const response = await fetch(`${relayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
           if (!response.ok) {
             throw new Error(
               `Impossibile scaricare dal gateway IPFS (status: ${response.status})`
