@@ -2493,14 +2493,6 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-onion@^0.1.16:
-  version "0.1.16"
-  resolved "https://registry.yarnpkg.com/shogun-onion/-/shogun-onion-0.1.16.tgz#f5a427a040f1cb6747ecd48358543c5e57748f22"
-  integrity sha512-9YVn1F6smQShtMQefTYmFRxaZe3ZWq/VIl1NLGNV0i4kBXFziZU06FnVhagqXMmyouvyKmmSWHg8PXZTaZ5sKA==
-  dependencies:
-    shogun-theme latest
-    vercel "^48.10.2"
-
 shogun-relays@^1.0.8:
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/shogun-relays/-/shogun-relays-1.0.8.tgz#970a2201a58377055c6ed84f2d39e6946014dc76"
@@ -2509,11 +2501,6 @@ shogun-relays@^1.0.8:
     get-urls "^10.0.1"
     gun "^0.2020.1241"
     node-fetch "^3.1.0"
-
-shogun-theme@latest:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/shogun-theme/-/shogun-theme-1.0.2.tgz#7ab4d491c28363b7980737ac108b4f5f93b99149"
-  integrity sha512-MJmEPtGToRmgbPVfRFeKwL/7V6le6gjC8ag1jfspFjZ2ustmLy+bRs8GykhboFbYVbe8RHIXQjvxhASTNvP+3w==
 
 signal-exit@4.0.2:
   version "4.0.2"
@@ -2846,7 +2833,7 @@ v8-compile-cache-lib@^3.0.1:
   resolved "https://registry.yarnpkg.com/v8-compile-cache-lib/-/v8-compile-cache-lib-3.0.1.tgz#6336e8d71965cb3d35a1bbb7868445a7c05264bf"
   integrity sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==
 
-vercel@^48.10.2, vercel@^48.9.0:
+vercel@^48.9.0:
   version "48.10.4"
   resolved "https://registry.yarnpkg.com/vercel/-/vercel-48.10.4.tgz#846e370f70986cda6c71a2ecb6e9e8f87ed5b9eb"
   integrity sha512-kj0h5U2eYyqgo7zVcY8WY2v6MEcSgq643mIea/DR0zoCo/d1saxNRx5bUnbRR7P7sFCUsHEMWsYGwkJCPfKXAw==

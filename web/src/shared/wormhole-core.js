@@ -528,7 +528,7 @@ export class WormholeCore {
         encryptionEncryptedFilename: encryptionMetadata.encryptedFilename,
       };
       // Also add to a central index for the GC to find it
-      this.gun.get('shogun-wormhole').get('wormhole-transfers').get(code).put({
+      this.gun.get('shogun/wormhole').get('transfers').get(code).put({
         createdAt: transferData.createdAt,
       });
 
