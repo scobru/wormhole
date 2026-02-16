@@ -727,9 +727,7 @@ export class WormholeCore {
             },
           });
 
-          const blob = await new Response(stream).blob();
-
-          let finalBlob = blob;
+          let finalBlob;
           const encryptionMetadata = buildEncryptionMetadata(metadata);
 
           if (metadata.encrypted) {
@@ -744,7 +742,8 @@ export class WormholeCore {
             }
 
             try {
-              const encryptedBuffer = await blob.arrayBuffer();
+              // OPTIMIZATION: Read directly into ArrayBuffer to avoid creating intermediate Blob
+              const encryptedBuffer = await new Response(stream).arrayBuffer();
               this.onStatusChange({
                 code,
                 status: WormholeStatus.DECRYPTING,
@@ -767,6 +766,8 @@ export class WormholeCore {
               });
               return;
             }
+          } else {
+            finalBlob = await new Response(stream).blob();
           }
 
           this.onStatusChange({
