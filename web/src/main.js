@@ -78,6 +78,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.addEventListener("click", () => switchTab(button.dataset.tabButton));
     });
 
+    elements.sendPrompt.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        elements.sendPrompt.click();
+      }
+    });
+
     elements.sendPrompt.addEventListener("click", () => {
       if (state.selectedFile || state.transferInProgress) {
         return;
