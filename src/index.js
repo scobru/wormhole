@@ -346,9 +346,6 @@ async function main() {
   const args = process.argv.slice(2);
   const cli = await GunWormholeCLI.create();
 
-  console.log('AUTH_TOKEN', process.env.VITE_AUTH_TOKEN);
-  console.log('RELAY_URL', process.env.VITE_RELAY_URL);
-
   if (args.length === 0) {
     console.log(chalk.blue('🌌 GunDB Wormhole CLI'));
     console.log(chalk.gray('Trasferimento file P2P sicuro\n'));
