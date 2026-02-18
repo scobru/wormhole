@@ -6,22 +6,6 @@ const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  if (typeof window !== "undefined" && !window.ShogunRelays) {
-    try {
-      await import("shogun-relays");
-    } catch (error) {
-      console.warn("Impossibile caricare shogun-relays:", error);
-    }
-  }
-  const gunGlobal = window.Gun;
-
-  if (!gunGlobal) {
-    console.error("Gun non è stato caricato correttamente.");
-    return;
-  }
-
-  setupGunOptHook(gunGlobal);
-
   const elements = getDomElements();
   const state = {
     selectedFile: null,
@@ -30,48 +14,68 @@ document.addEventListener("DOMContentLoaded", async () => {
     activeTab: "send",
   };
 
-  const relayManager = window.ShogunRelays;
-
-  let relays = [];
-  try {
-    if (relayManager?.forceListUpdate) {
-      relays = await relayManager.forceListUpdate();
-    } else {
-      console.warn("ShogunRelays.forceListUpdate non disponibile. Uso relay di default.");
-    }
-  } catch (error) {
-    console.warn("Impossibile recuperare l'elenco dei relay:", error);
-  }
-
-  const defaultPeers = [
-     "https://shogun-relay.scobrudot.dev/gun",
-     "https://shogun-linda-relay.scobrudot.dev/gun",
-     "https://peer.wallie.io/gun",
-     "https://gun.defucc.me/gun",
-     "https://a.talkflow.team/gun",
-  ];
-
-  const peerSet = new Set(defaultPeers);
-  relays.forEach((relayUrl) => {
-    if (typeof relayUrl === "string" && relayUrl.trim().length > 0) {
-      peerSet.add(relayUrl);
-    }
-  });
-
-  const gunInstance = gunGlobal({
-    peers: Array.from(peerSet),
-    localStorage: false,
-    radisk: false,
-  });
-
-  const wormhole = new WormholeCore({
-    gun: gunInstance,
-    onStatusChange: handleStatusChange,
-    onProgress: handleProgress,
-  });
-
   wireEventListeners();
   resetUI();
+
+  let wormhole = null;
+
+  const initPromise = (async () => {
+    if (typeof window !== "undefined" && !window.ShogunRelays) {
+      try {
+        await import("shogun-relays");
+      } catch (error) {
+        console.warn("Impossibile caricare shogun-relays:", error);
+      }
+    }
+    const gunGlobal = window.Gun;
+
+    if (!gunGlobal) {
+      console.error("Gun non è stato caricato correttamente.");
+      return;
+    }
+
+    setupGunOptHook(gunGlobal);
+
+    const relayManager = window.ShogunRelays;
+
+    let relays = [];
+    try {
+      if (relayManager?.forceListUpdate) {
+        relays = await relayManager.forceListUpdate();
+      } else {
+        console.warn("ShogunRelays.forceListUpdate non disponibile. Uso relay di default.");
+      }
+    } catch (error) {
+      console.warn("Impossibile recuperare l'elenco dei relay:", error);
+    }
+
+    const defaultPeers = [
+      "https://shogun-relay.scobrudot.dev/gun",
+      "https://shogun-linda-relay.scobrudot.dev/gun",
+      "https://peer.wallie.io/gun",
+      "https://gun.defucc.me/gun",
+      "https://a.talkflow.team/gun",
+    ];
+
+    const peerSet = new Set(defaultPeers);
+    relays.forEach((relayUrl) => {
+      if (typeof relayUrl === "string" && relayUrl.trim().length > 0) {
+        peerSet.add(relayUrl);
+      }
+    });
+
+    const gunInstance = gunGlobal({
+      peers: Array.from(peerSet),
+      localStorage: false,
+      radisk: false,
+    });
+
+    wormhole = new WormholeCore({
+      gun: gunInstance,
+      onStatusChange: handleStatusChange,
+      onProgress: handleProgress,
+    });
+  })();
 
   function wireEventListeners() {
     elements.tabButtons.forEach((button) => {
@@ -203,39 +207,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 3000);
   }
 
-  async function checkRelayStatus() {
-    try {
-      const response = await fetch(`${RELAY_URL}/health`, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit',
-      });
-      if (!response.ok) {
-        console.warn(`Relay health check returned ${response.status}: ${response.statusText}`);
-        // Don't block the transfer if health check fails - the relay might still work
-        return true;
-      }
-      return true;
-    } catch (error) {
-      // Handle CORS errors and network failures gracefully
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        console.warn('Relay health check failed (CORS or network error). Continuing anyway...', error);
-        // Don't block the transfer - CORS might be an issue but the relay could still work
-        return true;
-      }
-      console.warn('Relay health check error:', error);
-      // Don't block the transfer on health check failures
-      return true;
-    }
-  }
-
   async function sendFile() {
     if (!state.selectedFile || state.transferInProgress) {
       return;
     }
 
-    if (!(await checkRelayStatus())) {
-      return;
+    if (!wormhole) {
+      showStatus("send", "info", "Inizializzazione in corso...");
+      await initPromise;
+      if (!wormhole) {
+        showStatus("send", "error", "Inizializzazione fallita.");
+        return;
+      }
     }
 
     state.transferInProgress = true;
@@ -264,7 +247,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function connectToSender() {
+  async function connectToSender() {
     const code = elements.receiveCodeInput.value.trim();
 
     if (!code) {
@@ -275,6 +258,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (state.transferInProgress) {
       showStatus("receive", "info", "Un altro trasferimento è già in corso. Attendi il completamento.");
       return;
+    }
+
+    if (!wormhole) {
+      showStatus("receive", "info", "Inizializzazione in corso...");
+      await initPromise;
+      if (!wormhole) {
+        showStatus("receive", "error", "Inizializzazione fallita.");
+        return;
+      }
     }
 
     state.transferInProgress = true;
