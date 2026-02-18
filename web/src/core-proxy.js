@@ -1,2 +1,2 @@
-export * from "./shared/wormhole-core.js";
+export * from './shared/wormhole-core.js';
 

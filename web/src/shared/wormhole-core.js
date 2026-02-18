@@ -262,29 +262,32 @@ async function encryptFileWithCode(file, code, fallbackName, fallbackLastModifie
     fileBuffer
   );
 
-  const encryptedBlob = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
   const encryptedFilename = `${normalizedFileName}.enc`;
 
   let encryptedFile;
   if (typeof File === 'function') {
-    encryptedFile = new File([encryptedBlob], encryptedFilename, {
+    encryptedFile = new File([encryptedBuffer], encryptedFilename, {
       type: 'application/octet-stream',
       lastModified,
     });
   } else {
-    encryptedFile = new Blob([encryptedBlob], { type: 'application/octet-stream' });
+    encryptedFile = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
     try {
       Object.defineProperty(encryptedFile, 'name', {
         value: encryptedFilename,
         configurable: true,
       });
-    } catch {}
+    } catch {
+      // ignore
+    }
     try {
       Object.defineProperty(encryptedFile, 'lastModified', {
         value: lastModified,
         configurable: true,
       });
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
   return {
@@ -501,7 +504,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.PINNING,
-        message: `File aggiunto a IPFS. In attesa della conferma del pin...`,
+        message: 'File aggiunto a IPFS. In attesa della conferma del pin...',
       });
 
       // 2. Save metadata (including the IPFS hash) to Gun
@@ -728,6 +731,7 @@ export class WormholeCore {
           });
 
           let finalBlob;
+          let decryptedBuffer;
           const encryptionMetadata = buildEncryptionMetadata(metadata);
 
           if (metadata.encrypted) {
@@ -749,7 +753,7 @@ export class WormholeCore {
                 status: WormholeStatus.DECRYPTING,
                 message: 'Decifratura del file in corso...',
               });
-              const decryptedBuffer = await decryptArrayBufferWithCode(
+              decryptedBuffer = await decryptArrayBufferWithCode(
                 encryptedBuffer,
                 code,
                 encryptionMetadata
@@ -776,6 +780,8 @@ export class WormholeCore {
             message: 'File scaricato con successo.',
             fileData: {
               blob: finalBlob,
+              // Optimization: Pass buffer directly to avoid Blob -> ArrayBuffer conversion
+              buffer: decryptedBuffer,
               filename: metadata.filename,
               type: metadata.type,
             },

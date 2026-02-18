@@ -169,7 +169,7 @@ class GunWormholeCLI {
         }
         break;
       case WormholeStatus.DOWNLOADED:
-        this.saveFile(fileData.blob, fileData.filename, this.spinner);
+        this.saveFile(fileData, this.spinner);
         break;
       case WormholeStatus.UNPINNED:
         if (this.spinner.isSpinning) {
@@ -291,9 +291,13 @@ class GunWormholeCLI {
     this.wormhole.receive(code, this.relayUrl);
   }
 
-  async saveFile(blob, filename, spinner) {
+  async saveFile(fileData, spinner) {
+    const { blob, filename, buffer: dataBuffer } = fileData;
     try {
-      const buffer = Buffer.from(await blob.arrayBuffer());
+      // Use buffer directly if available (CLI optimization), otherwise fallback to Blob
+      const buffer = dataBuffer
+        ? Buffer.from(dataBuffer)
+        : Buffer.from(await blob.arrayBuffer());
 
       // Sanitize filename to prevent path traversal
       const safeFilename = path.basename(filename);
