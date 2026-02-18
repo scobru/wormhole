@@ -162,7 +162,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
       await navigator.clipboard.writeText(state.currentCode);
+
+      // UX Improvement: Visual feedback on button
+      const originalText = elements.copyCodeButton.innerText;
+      elements.copyCodeButton.innerText = "Copied!";
+      elements.copyCodeButton.classList.remove("btn-accent");
+      elements.copyCodeButton.classList.add("btn-success");
+      elements.copyCodeButton.disabled = true;
+
       showStatus("send", "info", "📋 Codice copiato negli appunti!");
+
+      setTimeout(() => {
+        elements.copyCodeButton.innerText = originalText;
+        elements.copyCodeButton.classList.remove("btn-success");
+        elements.copyCodeButton.classList.add("btn-accent");
+        elements.copyCodeButton.disabled = false;
+      }, 2000);
     } catch (error) {
       console.error(error);
       showStatus("send", "error", "❌ Impossibile copiare il codice.");
