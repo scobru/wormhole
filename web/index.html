@@ -28,6 +28,11 @@
       border-color: hsl(var(--a));
       background-color: hsl(var(--b2));
     }
+
+    .file-drop-zone:focus-visible {
+      outline: 2px solid hsl(var(--a));
+      outline-offset: 2px;
+    }
   </style>
 </head>
 
@@ -47,7 +52,7 @@
           </div>
 
           <div id="send-tab" class="w-full space-y-4" data-tab-panel="send">
-            <div id="send-prompt"
+            <div id="send-prompt" role="button" tabindex="0" aria-label="Click or press Enter to upload a file"
               class="file-drop-zone flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-base-200 transition-all duration-200">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-accent" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
