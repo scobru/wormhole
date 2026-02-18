@@ -24,9 +24,8 @@ import { forceListUpdate } from 'shogun-relays';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const RELAY_URL =
-  process.env.VITE_RELAY_URL;
-const AUTH_TOKEN =  process.env.VITE_AUTH_TOKEN;
+const RELAY_URL = process.env.VITE_RELAY_URL;
+const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN;
 
 const DEFAULT_PEERS = [
   'https://gun.defucc.me/gun',
@@ -123,9 +122,9 @@ class GunWormholeCLI {
         break;
       case WormholeStatus.SENT:
         this.spinner.succeed(message);
-        console.log(chalk.green.bold(`\n🎯 Condividi questo codice:`));
+        console.log(chalk.green.bold('\n🎯 Condividi questo codice:'));
         console.log(chalk.black.bgWhite(` ${code} `));
-        console.log(chalk.gray(`\nComando per il ricevente:`));
+        console.log(chalk.gray('\nComando per il ricevente:'));
         console.log(chalk.cyan(`gwh receive ${code}`));
         console.log(
           chalk.yellow(
