@@ -295,13 +295,15 @@ class GunWormholeCLI {
     try {
       const buffer = Buffer.from(await blob.arrayBuffer());
 
-      let outputPath = filename;
+      // Sanitize filename to prevent path traversal
+      const safeFilename = path.basename(filename);
+      let outputPath = safeFilename;
       let counter = 1;
 
       // Evita sovrascrittura
       while (fs.existsSync(outputPath)) {
-        const ext = path.extname(filename);
-        const name = path.basename(filename, ext);
+        const ext = path.extname(safeFilename);
+        const name = path.basename(safeFilename, ext);
         outputPath = `${name} (${counter})${ext}`;
         counter++;
       }
