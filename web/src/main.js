@@ -193,20 +193,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const icon = getFileIcon(file.type);
     const formattedSize = formatBytes(file.size);
-    elements.fileDetails.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">${icon}</span>
-        <strong class="text-accent break-all">${file.name}</strong>
-      </div>
-      <div class="mt-2 text-sm text-gray-400">
-        <div class="flex items-center gap-2">
-          <span>📏 Dimensione: ${formattedSize}</span>
-        </div>
-        <div class="flex items-center gap-2 mt-1">
-          <span>📋 Tipo: ${file.type || 'Sconosciuto'}</span>
-        </div>
-      </div>
-    `;
+
+    elements.fileDetails.innerHTML = '';
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'flex items-center gap-2';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'text-2xl';
+    iconSpan.textContent = icon;
+
+    const nameStrong = document.createElement('strong');
+    nameStrong.className = 'text-accent break-all';
+    nameStrong.textContent = file.name;
+
+    headerDiv.appendChild(iconSpan);
+    headerDiv.appendChild(nameStrong);
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'mt-2 text-sm text-gray-400';
+
+    const sizeDiv = document.createElement('div');
+    sizeDiv.className = 'flex items-center gap-2';
+    const sizeSpan = document.createElement('span');
+    sizeSpan.textContent = `📏 Dimensione: ${formattedSize}`;
+    sizeDiv.appendChild(sizeSpan);
+
+    const typeDiv = document.createElement('div');
+    typeDiv.className = 'flex items-center gap-2 mt-1';
+    const typeSpan = document.createElement('span');
+    typeSpan.textContent = `📋 Tipo: ${file.type || 'Sconosciuto'}`;
+    typeDiv.appendChild(typeSpan);
+
+    infoDiv.appendChild(sizeDiv);
+    infoDiv.appendChild(typeDiv);
+
+    elements.fileDetails.appendChild(headerDiv);
+    elements.fileDetails.appendChild(infoDiv);
 
     showStatus('send', 'success', '✅ File selezionato con successo!');
     window.setTimeout(() => {
@@ -362,11 +385,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const alertType =
       type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
 
-    statusContainer.innerHTML = `
-      <div class="alert ${alertType} shadow-lg mt-4 text-sm p-3">
-        <span>${message}</span>
-      </div>
-    `;
+    statusContainer.innerHTML = '';
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${alertType} shadow-lg mt-4 text-sm p-3`;
+    const span = document.createElement('span');
+    span.textContent = message;
+    alertDiv.appendChild(span);
+    statusContainer.appendChild(alertDiv);
   }
 
   function updateProgress(tab, progress) {
