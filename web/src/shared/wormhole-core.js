@@ -518,17 +518,11 @@ export class WormholeCore {
         createdAt: Date.now(), // For the Garbage Collector
         encrypted: true,
         encryptedSize: encryptedFile.size,
-        encryption: encryptionMetadata,
+        // Optimization: Reduce metadata size and GunDB graph complexity
+        // by sending only the serialized metadata string.
+        // We avoid sending the redundant 'encryption' object (which creates a sub-node)
+        // and the flat fields. The receiver's buildEncryptionMetadata handles this correctly.
         encryptionSerialized: serializedEncryption,
-        encryptionVersion: encryptionMetadata.version,
-        encryptionAlgorithm: encryptionMetadata.algorithm,
-        encryptionIv: encryptionMetadata.iv,
-        encryptionSalt: encryptionMetadata.salt,
-        encryptionIterations: encryptionMetadata.iterations,
-        encryptionKeyLength: encryptionMetadata.keyLength,
-        encryptionHash: encryptionMetadata.hash,
-        encryptionOriginalName: encryptionMetadata.originalName,
-        encryptionEncryptedFilename: encryptionMetadata.encryptedFilename,
       };
       // Also add to a central index for the GC to find it
       this.gun.get('shogun/wormhole').get('transfers').get(code).put({
