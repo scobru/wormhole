@@ -160,12 +160,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    const originalText = elements.copyCodeButton.textContent;
+
     try {
       await navigator.clipboard.writeText(state.currentCode);
       showStatus('send', 'info', '📋 Codice copiato negli appunti!');
+
+      elements.copyCodeButton.textContent = 'Copiato! ✅';
+      elements.copyCodeButton.classList.add('pointer-events-none');
+      elements.copyCodeButton.classList.remove('btn-accent');
+      elements.copyCodeButton.classList.add('btn-success');
+
+      setTimeout(() => {
+        elements.copyCodeButton.textContent = originalText;
+        elements.copyCodeButton.classList.remove('pointer-events-none');
+        elements.copyCodeButton.classList.remove('btn-success');
+        elements.copyCodeButton.classList.add('btn-accent');
+      }, 2000);
     } catch (error) {
       console.error(error);
       showStatus('send', 'error', '❌ Impossibile copiare il codice.');
+
+      elements.copyCodeButton.textContent = 'Errore ❌';
+      elements.copyCodeButton.classList.add('pointer-events-none');
+      elements.copyCodeButton.classList.remove('btn-accent');
+      elements.copyCodeButton.classList.add('btn-error');
+
+      setTimeout(() => {
+        elements.copyCodeButton.textContent = originalText;
+        elements.copyCodeButton.classList.remove('pointer-events-none');
+        elements.copyCodeButton.classList.remove('btn-error');
+        elements.copyCodeButton.classList.add('btn-accent');
+      }, 2000);
     }
   }
 
