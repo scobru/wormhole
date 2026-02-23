@@ -77,6 +77,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   })();
 
+  function setButtonLoading(button, isLoading, loadingText) {
+    if (!button) return;
+
+    if (isLoading) {
+      if (!button.dataset.originalContent) {
+        button.dataset.originalContent = button.innerHTML;
+      }
+      button.innerHTML = `<span class="loading loading-spinner loading-sm"></span> ${loadingText}`;
+      button.disabled = false;
+      button.classList.add('pointer-events-none');
+      button.setAttribute('aria-busy', 'true');
+    } else {
+      if (button.dataset.originalContent) {
+        button.innerHTML = button.dataset.originalContent;
+        delete button.dataset.originalContent;
+      }
+      button.classList.remove('pointer-events-none');
+      button.removeAttribute('aria-busy');
+    }
+  }
+
   function wireEventListeners() {
     elements.tabButtons.forEach((button) => {
       button.addEventListener('click', () => switchTab(button.dataset.tabButton));
@@ -255,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     state.transferInProgress = true;
-    elements.sendButton.disabled = true;
+    setButtonLoading(elements.sendButton, true, 'Transferring...');
 
     try {
       const transferCode = await wormhole.send({
@@ -276,7 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error(error);
       showStatus('send', 'error', `❌ Upload fallito: ${error.message ?? 'Errore sconosciuto'}`);
       state.transferInProgress = false;
-      elements.sendButton.disabled = false;
+      setButtonLoading(elements.sendButton, false);
     }
   }
 
@@ -303,6 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     state.transferInProgress = true;
+    setButtonLoading(elements.receiveButton, true, 'Connecting...');
     wormhole.receive(code, RELAY_URL);
   }
 
@@ -325,6 +347,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         break;
       case WormholeStatus.COMPLETED:
         showStatus(state.activeTab, 'success', message);
+        setButtonLoading(elements.sendButton, false);
+        elements.sendButton.disabled = true;
         window.setTimeout(resetUI, 4000);
         break;
       case WormholeStatus.UNPINNING:
@@ -339,6 +363,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       case WormholeStatus.ERROR:
         showStatus(state.activeTab, 'error', message);
         state.transferInProgress = false;
+        setButtonLoading(elements.sendButton, false);
+        setButtonLoading(elements.receiveButton, false);
         if (state.activeTab === 'send') {
           elements.sendButton.disabled = false;
         }
@@ -365,6 +391,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         downloadBlob(fileData?.blob, fileData?.filename ?? 'download');
         showStatus('receive', 'success', message);
         state.transferInProgress = false;
+        setButtonLoading(elements.receiveButton, false);
+        elements.receiveButton.disabled = true;
         window.setTimeout(resetUI, 4000);
         break;
       default:
@@ -417,6 +445,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.sendPrompt.classList.remove('hidden');
     elements.fileInfoSection.classList.add('hidden');
     elements.codeSection.classList.add('hidden');
+    setButtonLoading(elements.sendButton, false);
+    setButtonLoading(elements.receiveButton, false);
     elements.sendButton.disabled = true;
 
     Object.values(elements.status).forEach((container) => {
