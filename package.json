@@ -31,7 +31,8 @@
     "filesize": "^10.1.0",
     "gun": "^0.2020.1241",
     "ora": "^8.0.1",
-    "shogun-relays": "^1.0.8"
+    "shogun-relays": "^1.0.8",
+    "vercel": "^50.22.1"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
