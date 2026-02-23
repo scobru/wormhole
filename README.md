@@ -83,14 +83,14 @@ The core module handles the file transfer logic:
 const wormhole = new WormholeCore({
   gun: gunInstance,
   onStatusChange: handleStatus,
-  onProgress: handleProgress
+  onProgress: handleProgress,
 });
 
 // Send a file
 const code = await wormhole.send({
   file: fileBlob,
-  relayUrl: "https://relay.example.com",
-  authToken: "your-token"
+  relayUrl: 'https://relay.example.com',
+  authToken: 'your-token',
 });
 
 // Receive a file
@@ -120,15 +120,15 @@ Modern web UI built with:
 
 The system uses various status codes to track transfer progress:
 
-| Status      | Description                           |
-|-------------|---------------------------------------|
-| uploading   | File is being uploaded to IPFS        |
-| pinning     | Waiting for IPFS pin confirmation     |
-| sent        | File ready for recipient              |
-| connecting  | Searching for transfer                |
-| downloading | File download in progress             |
-| completed   | Transfer successfully completed        |
-| error       | An error occurred                     |
+| Status      | Description                       |
+| ----------- | --------------------------------- |
+| uploading   | File is being uploaded to IPFS    |
+| pinning     | Waiting for IPFS pin confirmation |
+| sent        | File ready for recipient          |
+| connecting  | Searching for transfer            |
+| downloading | File download in progress         |
+| completed   | Transfer successfully completed   |
+| error       | An error occurred                 |
 
 ## Configuration
 
@@ -142,6 +142,7 @@ The system uses various status codes to track transfer progress:
 ### GunDB Peers
 
 Default peers:
+
 - `https://peer.wallie.io/gun`
 - `https://gun-manhattan.herokuapp.com/gun`
 
@@ -180,6 +181,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Credits
 
 Built with:
+
 - [GunDB](https://gun.eco/)
 - [IPFS](https://ipfs.io/)
 - [DaisyUI](https://daisyui.com/)

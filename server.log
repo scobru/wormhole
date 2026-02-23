@@ -1,8 +1,14 @@
-yarn run v1.22.22
-$ vite
 
-  VITE v5.4.21  ready in 262 ms
+> gundb-wormhole@1.1.0 start
+> npx serve dist
 
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-Done in 95.14s.
+npm warn exec The following package was not found and will be installed: serve@14.2.5
+ INFO  Accepting connections at http://localhost:3000
+ HTTP  2/23/2026 12:58:11 PM ::1 GET /
+ HTTP  2/23/2026 12:58:11 PM ::1 Returned 200 in 51 ms
+ HTTP  2/23/2026 12:58:11 PM ::1 GET /styles/wormhole.css
+ HTTP  2/23/2026 12:58:11 PM ::1 Returned 200 in 5 ms
+ HTTP  2/23/2026 12:58:11 PM ::1 GET /assets/index-UwLPtJSj.js
+ HTTP  2/23/2026 12:58:11 PM ::1 Returned 200 in 3 ms
+ HTTP  2/23/2026 12:58:12 PM ::1 GET /assets/browser-DR_DUdUk.js
+ HTTP  2/23/2026 12:58:12 PM ::1 Returned 200 in 4 ms
