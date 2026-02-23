@@ -9,7 +9,10 @@ async function loadRelayLibrary() {
     relayModulePromise = import('shogun-relays')
       .then((mod) => mod ?? null)
       .catch((error) => {
-        console.warn('Unable to load shogun-relays in Node environment:', error);
+        console.warn(
+          'Unable to load shogun-relays in Node environment:',
+          error
+        );
         return null;
       });
     return relayModulePromise;
@@ -48,7 +51,9 @@ export const getRelays = async () => {
     return relayLibrary.getRelays();
   }
 
-  throw new Error('forceListUpdate non disponibile nel pacchetto shogun-relays');
+  throw new Error(
+    'forceListUpdate non disponibile nel pacchetto shogun-relays'
+  );
 };
 
 // Shared config
@@ -152,7 +157,10 @@ function parseSerializedMetadata(serialized) {
   try {
     return JSON.parse(serialized);
   } catch (error) {
-    console.warn('Impossibile parsare metadati di cifratura serializzati:', error);
+    console.warn(
+      'Impossibile parsare metadati di cifratura serializzati:',
+      error
+    );
     return null;
   }
 }
@@ -182,14 +190,25 @@ function buildEncryptionMetadata(source) {
 
   const metadata = {
     version: base.version ?? source.encryptionVersion ?? 1,
-    algorithm: base.algorithm ?? source.encryptionAlgorithm ?? ENCRYPTION_CONFIG.algorithm,
+    algorithm:
+      base.algorithm ??
+      source.encryptionAlgorithm ??
+      ENCRYPTION_CONFIG.algorithm,
     iv: base.iv ?? source.encryptionIv,
     salt: base.salt ?? source.encryptionSalt,
-    iterations: base.iterations ?? source.encryptionIterations ?? ENCRYPTION_CONFIG.iterations,
-    keyLength: base.keyLength ?? source.encryptionKeyLength ?? ENCRYPTION_CONFIG.keyLength,
+    iterations:
+      base.iterations ??
+      source.encryptionIterations ??
+      ENCRYPTION_CONFIG.iterations,
+    keyLength:
+      base.keyLength ??
+      source.encryptionKeyLength ??
+      ENCRYPTION_CONFIG.keyLength,
     hash: base.hash ?? source.encryptionHash ?? ENCRYPTION_CONFIG.hash,
-    encryptedFilename: base.encryptedFilename ?? source.encryptionEncryptedFilename,
-    originalName: base.originalName ?? source.encryptionOriginalName ?? source.filename,
+    encryptedFilename:
+      base.encryptedFilename ?? source.encryptionEncryptedFilename,
+    originalName:
+      base.originalName ?? source.encryptionOriginalName ?? source.filename,
   };
 
   if (!metadata.iv || !metadata.salt) {
@@ -206,8 +225,13 @@ function hasEncryptionMetadata(data) {
   return Boolean(buildEncryptionMetadata(data));
 }
 
-async function deriveKeyFromCode(code, saltBytes, iterations = ENCRYPTION_CONFIG.iterations) {
-  const salt = saltBytes instanceof Uint8Array ? saltBytes : new Uint8Array(saltBytes);
+async function deriveKeyFromCode(
+  code,
+  saltBytes,
+  iterations = ENCRYPTION_CONFIG.iterations
+) {
+  const salt =
+    saltBytes instanceof Uint8Array ? saltBytes : new Uint8Array(saltBytes);
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     textEncoder.encode(code),
@@ -233,7 +257,12 @@ async function deriveKeyFromCode(code, saltBytes, iterations = ENCRYPTION_CONFIG
   );
 }
 
-async function encryptFileWithCode(file, code, fallbackName, fallbackLastModified) {
+async function encryptFileWithCode(
+  file,
+  code,
+  fallbackName,
+  fallbackLastModified
+) {
   const normalizedFileName =
     typeof file?.name === 'string' && file.name.trim()
       ? file.name.trim()
@@ -248,7 +277,9 @@ async function encryptFileWithCode(file, code, fallbackName, fallbackLastModifie
         ? fallbackLastModified
         : Date.now();
 
-  const salt = crypto.getRandomValues(new Uint8Array(ENCRYPTION_CONFIG.saltLength));
+  const salt = crypto.getRandomValues(
+    new Uint8Array(ENCRYPTION_CONFIG.saltLength)
+  );
   const iv = crypto.getRandomValues(new Uint8Array(ENCRYPTION_CONFIG.ivLength));
 
   const key = await deriveKeyFromCode(code, salt);
@@ -271,7 +302,9 @@ async function encryptFileWithCode(file, code, fallbackName, fallbackLastModifie
       lastModified,
     });
   } else {
-    encryptedFile = new Blob([encryptedBuffer], { type: 'application/octet-stream' });
+    encryptedFile = new Blob([encryptedBuffer], {
+      type: 'application/octet-stream',
+    });
     try {
       Object.defineProperty(encryptedFile, 'name', {
         value: encryptedFilename,
@@ -326,7 +359,9 @@ async function decryptArrayBufferWithCode(encryptedBuffer, code, metadata) {
       encryptedBuffer
     );
   } catch (error) {
-    throw new Error('Impossibile decifrare il file. Verifica il codice inserito e riprova.');
+    throw new Error(
+      'Impossibile decifrare il file. Verifica il codice inserito e riprova.'
+    );
   }
 }
 
@@ -390,7 +425,15 @@ export class WormholeCore {
     this.onProgress = options.onProgress || (() => {});
   }
 
-  async send({ file, filename, size, type, relayUrl, authToken, lastModified }) {
+  async send({
+    file,
+    filename,
+    size,
+    type,
+    relayUrl,
+    authToken,
+    lastModified,
+  }) {
     const code = generateCode();
 
     this.onStatusChange({
@@ -476,7 +519,8 @@ export class WormholeCore {
         let errorMessage = 'Upload fallito';
         try {
           const errorResult = await response.json();
-          errorMessage = errorResult.error || `Upload fallito (${response.status})`;
+          errorMessage =
+            errorResult.error || `Upload fallito (${response.status})`;
         } catch {
           errorMessage = `Upload fallito con status ${response.status}`;
         }
@@ -490,7 +534,8 @@ export class WormholeCore {
 
       const result = await response.json();
       if (!result.success || !result.file?.hash) {
-        const errorMessage = result.error || 'Risposta non valida dal relay IPFS';
+        const errorMessage =
+          result.error || 'Risposta non valida dal relay IPFS';
         this.onStatusChange({
           code,
           status: WormholeStatus.ERROR,
@@ -542,7 +587,8 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.SENT,
-        message: 'File disponibile. Condividi il codice per iniziare il download.',
+        message:
+          'File disponibile. Condividi il codice per iniziare il download.',
       });
 
       // Monitor for completion to unpin
@@ -563,14 +609,17 @@ export class WormholeCore {
               message: 'Tentativo di unpin da IPFS per pulizia...',
             });
 
-            const unpinResponse = await fetch(`${relayUrl}/api/v1/ipfs/pin/rm`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${authToken}`,
-              },
-              body: JSON.stringify({ cid: ipfsHash }),
-            });
+            const unpinResponse = await fetch(
+              `${relayUrl}/api/v1/ipfs/pin/rm`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ cid: ipfsHash }),
+              }
+            );
 
             if (unpinResponse.ok) {
               const unpinResult = await unpinResponse.json();
@@ -581,10 +630,14 @@ export class WormholeCore {
                   message: 'File rimosso da IPFS con successo.',
                 });
               } else {
-                throw new Error(unpinResult.error || 'Unpin fallito sul relay.');
+                throw new Error(
+                  unpinResult.error || 'Unpin fallito sul relay.'
+                );
               }
             } else {
-              throw new Error(`Il relay ha risposto con errore ${unpinResponse.status}`);
+              throw new Error(
+                `Il relay ha risposto con errore ${unpinResponse.status}`
+              );
             }
           } catch (e) {
             console.error('Unpin failed:', e);
@@ -642,7 +695,9 @@ export class WormholeCore {
           console.log('📦 Dati ricevuti da Gun:', data, 'Key:', key);
           if (data && data.ipfsHash && !dataReceived) {
             if (!hasEncryptionMetadata(data)) {
-              console.log('⏳ Metadati cifratura incompleti, attendo aggiornamenti...');
+              console.log(
+                '⏳ Metadati cifratura incompleti, attendo aggiornamenti...'
+              );
               return;
             }
             dataReceived = true;
@@ -683,7 +738,9 @@ export class WormholeCore {
 
         // 3. Download file from IPFS Gateway
         try {
-          const response = await fetch(`${relayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
+          const response = await fetch(
+            `${relayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`
+          );
           if (!response.ok) {
             throw new Error(
               `Impossibile scaricare dal gateway IPFS (status: ${response.status})`
@@ -807,5 +864,3 @@ export class WormholeCore {
 
 // Export utility functions for use in environment-specific code
 export { generateCode, base64ToChunks };
-
-

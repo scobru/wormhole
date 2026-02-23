@@ -1,6 +1,5 @@
 import { WormholeCore, WormholeStatus } from '@wormhole/core';
 
-
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -43,7 +42,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (relayManager?.forceListUpdate) {
         relays = await relayManager.forceListUpdate();
       } else {
-        console.warn('ShogunRelays.forceListUpdate non disponibile. Uso relay di default.');
+        console.warn(
+          'ShogunRelays.forceListUpdate non disponibile. Uso relay di default.'
+        );
       }
     } catch (error) {
       console.warn('Impossibile recuperare l\'elenco dei relay:', error);
@@ -79,7 +80,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function wireEventListeners() {
     elements.tabButtons.forEach((button) => {
-      button.addEventListener('click', () => switchTab(button.dataset.tabButton));
+      button.addEventListener('click', () =>
+        switchTab(button.dataset.tabButton)
+      );
     });
 
     elements.sendPrompt.addEventListener('keydown', (event) => {
@@ -219,20 +222,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const icon = getFileIcon(file.type);
     const formattedSize = formatBytes(file.size);
-    elements.fileDetails.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">${icon}</span>
-        <strong class="text-accent break-all">${file.name}</strong>
-      </div>
-      <div class="mt-2 text-sm text-gray-400">
-        <div class="flex items-center gap-2">
-          <span>📏 Dimensione: ${formattedSize}</span>
-        </div>
-        <div class="flex items-center gap-2 mt-1">
-          <span>📋 Tipo: ${file.type || 'Sconosciuto'}</span>
-        </div>
-      </div>
-    `;
+    // Clear previous content
+    elements.fileDetails.textContent = '';
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'flex items-center gap-2';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'text-2xl';
+    iconSpan.textContent = icon;
+
+    const nameStrong = document.createElement('strong');
+    nameStrong.className = 'text-accent break-all';
+    nameStrong.textContent = file.name;
+
+    headerDiv.appendChild(iconSpan);
+    headerDiv.appendChild(nameStrong);
+
+    const detailsDiv = document.createElement('div');
+    detailsDiv.className = 'mt-2 text-sm text-gray-400';
+
+    const sizeDiv = document.createElement('div');
+    sizeDiv.className = 'flex items-center gap-2';
+    sizeDiv.textContent = `📏 Dimensione: ${formattedSize}`;
+
+    const typeDiv = document.createElement('div');
+    typeDiv.className = 'flex items-center gap-2 mt-1';
+    typeDiv.textContent = `📋 Tipo: ${file.type || 'Sconosciuto'}`;
+
+    detailsDiv.appendChild(sizeDiv);
+    detailsDiv.appendChild(typeDiv);
+
+    elements.fileDetails.appendChild(headerDiv);
+    elements.fileDetails.appendChild(detailsDiv);
 
     showStatus('send', 'success', '✅ File selezionato con successo!');
     window.setTimeout(() => {
@@ -274,7 +296,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.fileInfoSection.classList.add('hidden');
     } catch (error) {
       console.error(error);
-      showStatus('send', 'error', `❌ Upload fallito: ${error.message ?? 'Errore sconosciuto'}`);
+      showStatus(
+        'send',
+        'error',
+        `❌ Upload fallito: ${error.message ?? 'Errore sconosciuto'}`
+      );
       state.transferInProgress = false;
       elements.sendButton.disabled = false;
     }
@@ -284,12 +310,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const code = elements.receiveCodeInput.value.trim();
 
     if (!code) {
-      showStatus('receive', 'error', 'Per favore, inserisci un codice di sincronizzazione.');
+      showStatus(
+        'receive',
+        'error',
+        'Per favore, inserisci un codice di sincronizzazione.'
+      );
       return;
     }
 
     if (state.transferInProgress) {
-      showStatus('receive', 'info', 'Un altro trasferimento è già in corso. Attendi il completamento.');
+      showStatus(
+        'receive',
+        'info',
+        'Un altro trasferimento è già in corso. Attendi il completamento.'
+      );
       return;
     }
 
@@ -347,7 +381,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         showStatus('receive', 'info', message);
         break;
       case WormholeStatus.FOUND: {
-        const sizeInMb = metadata?.size ? (metadata.size / 1024 / 1024).toFixed(2) : '0';
+        const sizeInMb = metadata?.size
+          ? (metadata.size / 1024 / 1024).toFixed(2)
+          : '0';
         showStatus(
           'receive',
           'info',
@@ -386,13 +422,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const alertType =
-      type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
+      type === 'error'
+        ? 'alert-error'
+        : type === 'success'
+          ? 'alert-success'
+          : 'alert-info';
 
-    statusContainer.innerHTML = `
-      <div class="alert ${alertType} shadow-lg mt-4 text-sm p-3">
-        <span>${message}</span>
-      </div>
-    `;
+    statusContainer.textContent = '';
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${alertType} shadow-lg mt-4 text-sm p-3`;
+
+    const span = document.createElement('span');
+    span.textContent = message;
+
+    alertDiv.appendChild(span);
+    statusContainer.appendChild(alertDiv);
   }
 
   function updateProgress(tab, progress) {
@@ -521,4 +566,3 @@ function setupGunOptHook(Gun) {
     });
   });
 }
-

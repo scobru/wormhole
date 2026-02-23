@@ -14,7 +14,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@wormhole/core': fileURLToPath(new URL('./src/core-proxy.js', import.meta.url)),
+      '@wormhole/core': fileURLToPath(
+        new URL('./src/core-proxy.js', import.meta.url)
+      ),
     },
   },
   build: {
@@ -22,4 +24,3 @@ export default defineConfig({
     emptyOutDir: true,
   },
 });
-
