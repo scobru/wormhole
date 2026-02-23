@@ -380,6 +380,65 @@ function base64ToChunks(base64Data) {
   return chunks;
 }
 
+async function readStreamToBuffer(stream, totalSize, onProgress) {
+  const reader = stream.getReader();
+  let receivedLength = 0;
+
+  // If we know the size, pre-allocate. Otherwise start small/empty.
+  let buffer = totalSize ? new Uint8Array(totalSize) : new Uint8Array(0);
+  let chunks = []; // Fallback if size is unknown or exceeded
+  let useChunks = !totalSize;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunkLength = value.length;
+
+    if (!useChunks) {
+      // Check if we have space
+      if (receivedLength + chunkLength <= buffer.length) {
+        buffer.set(value, receivedLength);
+      } else {
+        // Overflow: switch to chunks strategy for the rest
+        useChunks = true;
+        // Copy what we have so far into chunks
+        if (receivedLength > 0) {
+          chunks.push(buffer.subarray(0, receivedLength));
+        }
+        chunks.push(value);
+        buffer = null; // release reference to large buffer
+      }
+    } else {
+      chunks.push(value);
+    }
+
+    receivedLength += chunkLength;
+    if (onProgress && totalSize) {
+      const progress = Math.round((receivedLength / totalSize) * 100);
+      onProgress({ progress, loaded: receivedLength, total: totalSize });
+    }
+  }
+
+  if (useChunks) {
+    // Concatenate chunks
+    const combined = new Uint8Array(receivedLength);
+    let position = 0;
+    for (const chunk of chunks) {
+      combined.set(chunk, position);
+      position += chunk.length;
+    }
+    return combined;
+  }
+
+  // If we pre-allocated but received less, slice it.
+  if (receivedLength < buffer.length) {
+    return buffer.subarray(0, receivedLength);
+  }
+
+  return buffer;
+}
+
 export class WormholeCore {
   constructor(options = {}) {
     if (!options.gun) {
@@ -692,37 +751,20 @@ export class WormholeCore {
 
           const contentLength = response.headers.get('content-length');
           const total = parseInt(contentLength, 10);
-          let loaded = 0;
+          const expectedSize =
+            total || (metadata.encrypted ? metadata.encryptedSize : metadata.size);
 
-          const onProgress = this.onProgress;
-
-          const stream = new ReadableStream({
-            start(controller) {
-              const reader = response.body.getReader();
-              function read() {
-                reader
-                  .read()
-                  .then(({ done, value }) => {
-                    if (done) {
-                      controller.close();
-                      return;
-                    }
-                    loaded += value.byteLength;
-                    if (total) {
-                      const progress = Math.round((loaded / total) * 100);
-                      onProgress({ progress, loaded, total });
-                    }
-                    controller.enqueue(value);
-                    read();
-                  })
-                  .catch((error) => {
-                    console.error('Errore nello stream di lettura:', error);
-                    controller.error(error);
-                  });
-              }
-              read();
-            },
-          });
+          let downloadBuffer;
+          try {
+            downloadBuffer = await readStreamToBuffer(
+              response.body,
+              expectedSize,
+              (progressData) => this.onProgress(progressData)
+            );
+          } catch (streamError) {
+            console.error('Errore stream:', streamError);
+            throw streamError;
+          }
 
           let finalBlob;
           let decryptedBuffer;
@@ -741,14 +783,13 @@ export class WormholeCore {
 
             try {
               // OPTIMIZATION: Read directly into ArrayBuffer to avoid creating intermediate Blob
-              const encryptedBuffer = await new Response(stream).arrayBuffer();
               this.onStatusChange({
                 code,
                 status: WormholeStatus.DECRYPTING,
                 message: 'Decifratura del file in corso...',
               });
               decryptedBuffer = await decryptArrayBufferWithCode(
-                encryptedBuffer,
+                downloadBuffer,
                 code,
                 encryptionMetadata
               );
@@ -765,7 +806,10 @@ export class WormholeCore {
               return;
             }
           } else {
-            finalBlob = await new Response(stream).blob();
+            decryptedBuffer = downloadBuffer;
+            finalBlob = new Blob([downloadBuffer], {
+              type: metadata.type || 'application/octet-stream',
+            });
           }
 
           this.onStatusChange({
