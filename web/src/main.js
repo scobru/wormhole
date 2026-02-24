@@ -1,6 +1,5 @@
 import { WormholeCore, WormholeStatus } from '@wormhole/core';
 
-
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -43,10 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (relayManager?.forceListUpdate) {
         relays = await relayManager.forceListUpdate();
       } else {
-        console.warn('ShogunRelays.forceListUpdate non disponibile. Uso relay di default.');
+        console.warn(
+          'ShogunRelays.forceListUpdate non disponibile. Uso relay di default.'
+        );
       }
     } catch (error) {
-      console.warn('Impossibile recuperare l\'elenco dei relay:', error);
+      console.warn("Impossibile recuperare l'elenco dei relay:", error);
     }
 
     const defaultPeers = [
@@ -79,7 +80,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function wireEventListeners() {
     elements.tabButtons.forEach((button) => {
-      button.addEventListener('click', () => switchTab(button.dataset.tabButton));
+      button.addEventListener('click', () =>
+        switchTab(button.dataset.tabButton)
+      );
     });
 
     elements.sendPrompt.addEventListener('keydown', (event) => {
@@ -219,10 +222,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const icon = getFileIcon(file.type);
     const formattedSize = formatBytes(file.size);
+    // Sanitize filename to prevent XSS
+    const safeName = escapeHtml(file.name);
     elements.fileDetails.innerHTML = `
       <div class="flex items-center gap-2">
         <span class="text-2xl">${icon}</span>
-        <strong class="text-accent break-all">${file.name}</strong>
+        <strong class="text-accent break-all">${safeName}</strong>
       </div>
       <div class="mt-2 text-sm text-gray-400">
         <div class="flex items-center gap-2">
@@ -274,7 +279,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.fileInfoSection.classList.add('hidden');
     } catch (error) {
       console.error(error);
-      showStatus('send', 'error', `❌ Upload fallito: ${error.message ?? 'Errore sconosciuto'}`);
+      showStatus(
+        'send',
+        'error',
+        `❌ Upload fallito: ${error.message ?? 'Errore sconosciuto'}`
+      );
       state.transferInProgress = false;
       elements.sendButton.disabled = false;
     }
@@ -284,12 +293,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const code = elements.receiveCodeInput.value.trim();
 
     if (!code) {
-      showStatus('receive', 'error', 'Per favore, inserisci un codice di sincronizzazione.');
+      showStatus(
+        'receive',
+        'error',
+        'Per favore, inserisci un codice di sincronizzazione.'
+      );
       return;
     }
 
     if (state.transferInProgress) {
-      showStatus('receive', 'info', 'Un altro trasferimento è già in corso. Attendi il completamento.');
+      showStatus(
+        'receive',
+        'info',
+        'Un altro trasferimento è già in corso. Attendi il completamento.'
+      );
       return;
     }
 
@@ -347,7 +364,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         showStatus('receive', 'info', message);
         break;
       case WormholeStatus.FOUND: {
-        const sizeInMb = metadata?.size ? (metadata.size / 1024 / 1024).toFixed(2) : '0';
+        const sizeInMb = metadata?.size
+          ? (metadata.size / 1024 / 1024).toFixed(2)
+          : '0';
         showStatus(
           'receive',
           'info',
@@ -386,13 +405,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const alertType =
-      type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
+      type === 'error'
+        ? 'alert-error'
+        : type === 'success'
+          ? 'alert-success'
+          : 'alert-info';
 
-    statusContainer.innerHTML = `
-      <div class="alert ${alertType} shadow-lg mt-4 text-sm p-3">
-        <span>${message}</span>
-      </div>
-    `;
+    // Use DOM creation instead of innerHTML to prevent XSS from malicious messages
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${alertType} shadow-lg mt-4 text-sm p-3`;
+
+    const span = document.createElement('span');
+    span.textContent = message;
+
+    alertDiv.appendChild(span);
+
+    statusContainer.innerHTML = '';
+    statusContainer.appendChild(alertDiv);
   }
 
   function updateProgress(tab, progress) {
@@ -507,6 +536,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     return `${value.toFixed(1)} ${units[unitIndex]}`;
   }
+
+  function escapeHtml(text) {
+    if (!text) return text;
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 });
 
 function setupGunOptHook(Gun) {
@@ -521,4 +560,3 @@ function setupGunOptHook(Gun) {
     });
   });
 }
-
