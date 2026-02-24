@@ -236,7 +236,7 @@ class GunWormholeCLI {
       try {
         await clipboardy.write(code);
         console.log(chalk.green('📋 Codice copiato negli appunti!'));
-      } catch (e) {
+      } catch {
         // Ignore clipboard errors
       }
 
@@ -281,7 +281,7 @@ class GunWormholeCLI {
           }
         );
       });
-    } catch (error) {
+    } catch {
       // Ignora errori di multicast, non critici per il funzionamento
     }
   }
