@@ -146,7 +146,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.activeTab = tab;
 
     elements.tabButtons.forEach((button) => {
-      button.classList.toggle('tab-active', button.dataset.tabButton === tab);
+      const isActive = button.dataset.tabButton === tab;
+      button.classList.toggle('tab-active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
     Object.entries(elements.tabPanels).forEach(([panelKey, panelElement]) => {
