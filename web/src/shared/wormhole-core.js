@@ -380,6 +380,71 @@ function base64ToChunks(base64Data) {
   return chunks;
 }
 
+/**
+ * Reads a stream into an ArrayBuffer, with progress tracking.
+ * @param {ReadableStreamDefaultReader} reader - The stream reader.
+ * @param {number} [total] - Expected content length (optional).
+ * @param {function} [onProgress] - Callback for progress updates.
+ * @returns {Promise<Uint8Array>} The resulting buffer.
+ */
+async function readStreamToBuffer(reader, total, onProgress) {
+  let loaded = 0;
+
+  if (Number.isFinite(total) && total > 0) {
+    let buffer = new Uint8Array(total);
+    let offset = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      // Handle overflow if content-length was too small
+      if (offset + value.length > buffer.length) {
+        console.warn(
+          'Content-length mismatch: received more data than expected. Resizing buffer.'
+        );
+        // Resize buffer: double size or enough to fit new chunk
+        const newSize = Math.max(buffer.length * 2, offset + value.length);
+        const newBuffer = new Uint8Array(newSize);
+        newBuffer.set(buffer);
+        buffer = newBuffer;
+      }
+
+      buffer.set(value, offset);
+      offset += value.length;
+      loaded += value.length;
+
+      if (onProgress) {
+        onProgress({ loaded, total: buffer.length });
+      }
+    }
+
+    // If we allocated too much, return a view of the used portion
+    if (offset < buffer.length) {
+      return buffer.subarray(0, offset);
+    }
+    return buffer;
+  }
+
+  // Total unknown
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    if (onProgress) onProgress({ loaded, total: 0 });
+  }
+
+  const buffer = new Uint8Array(loaded);
+  let offset = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return buffer;
+}
+
 export class WormholeCore {
   constructor(options = {}) {
     if (!options.gun) {
@@ -692,40 +757,27 @@ export class WormholeCore {
 
           const contentLength = response.headers.get('content-length');
           const total = parseInt(contentLength, 10);
-          let loaded = 0;
 
           const onProgress = this.onProgress;
 
-          const stream = new ReadableStream({
-            start(controller) {
-              const reader = response.body.getReader();
-              function read() {
-                reader
-                  .read()
-                  .then(({ done, value }) => {
-                    if (done) {
-                      controller.close();
-                      return;
-                    }
-                    loaded += value.byteLength;
-                    if (total) {
-                      const progress = Math.round((loaded / total) * 100);
-                      onProgress({ progress, loaded, total });
-                    }
-                    controller.enqueue(value);
-                    read();
-                  })
-                  .catch((error) => {
-                    console.error('Errore nello stream di lettura:', error);
-                    controller.error(error);
-                  });
+          // OPTIMIZATION: Use helper to read stream efficiently into buffer
+          // This avoids the overhead of wrapping the stream and using Response.arrayBuffer()
+          const buffer = await readStreamToBuffer(
+            response.body.getReader(),
+            total,
+            (progressData) => {
+              // progressData is { loaded, total }
+              if (total) {
+                const percent = Math.round((progressData.loaded / total) * 100);
+                onProgress({ progress: percent, ...progressData });
+              } else {
+                onProgress({ progress: 0, ...progressData });
               }
-              read();
-            },
-          });
+            }
+          );
 
           let finalBlob;
-          let decryptedBuffer;
+          let finalBuffer = buffer; // Use the downloaded buffer
           const encryptionMetadata = buildEncryptionMetadata(metadata);
 
           if (metadata.encrypted) {
@@ -740,19 +792,19 @@ export class WormholeCore {
             }
 
             try {
-              // OPTIMIZATION: Read directly into ArrayBuffer to avoid creating intermediate Blob
-              const encryptedBuffer = await new Response(stream).arrayBuffer();
               this.onStatusChange({
                 code,
                 status: WormholeStatus.DECRYPTING,
                 message: 'Decifratura del file in corso...',
               });
-              decryptedBuffer = await decryptArrayBufferWithCode(
-                encryptedBuffer,
+
+              finalBuffer = await decryptArrayBufferWithCode(
+                buffer,
                 code,
                 encryptionMetadata
               );
-              finalBlob = new Blob([decryptedBuffer], {
+
+              finalBlob = new Blob([finalBuffer], {
                 type: metadata.type || 'application/octet-stream',
               });
             } catch (error) {
@@ -765,7 +817,9 @@ export class WormholeCore {
               return;
             }
           } else {
-            finalBlob = await new Response(stream).blob();
+            finalBlob = new Blob([buffer], {
+              type: metadata.type || 'application/octet-stream',
+            });
           }
 
           this.onStatusChange({
@@ -775,7 +829,8 @@ export class WormholeCore {
             fileData: {
               blob: finalBlob,
               // Optimization: Pass buffer directly to avoid Blob -> ArrayBuffer conversion
-              buffer: decryptedBuffer,
+              // Now both encrypted and unencrypted have buffer populated
+              buffer: finalBuffer,
               filename: metadata.filename,
               type: metadata.type,
             },
