@@ -219,24 +219,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const icon = getFileIcon(file.type);
     const formattedSize = formatBytes(file.size);
-    elements.fileDetails.innerHTML = `
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">${icon}</span>
-        <strong class="text-accent break-all">${file.name}</strong>
-      </div>
-      <div class="mt-2 text-sm text-gray-400">
-        <div class="flex items-center gap-2">
-          <span>📏 Dimensione: ${formattedSize}</span>
-        </div>
-        <div class="flex items-center gap-2 mt-1">
-          <span>📋 Tipo: ${file.type || 'Sconosciuto'}</span>
-        </div>
-      </div>
-    `;
+    // Securely update file details using DOM manipulation
+    elements.fileDetails.textContent = ''; // Clear previous content
+
+    const fileHeader = document.createElement('div');
+    fileHeader.className = 'flex items-center gap-2';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'text-2xl';
+    iconSpan.textContent = icon;
+
+    const nameStrong = document.createElement('strong');
+    nameStrong.className = 'text-accent break-all';
+    nameStrong.textContent = file.name;
+
+    fileHeader.appendChild(iconSpan);
+    fileHeader.appendChild(nameStrong);
+
+    const fileMeta = document.createElement('div');
+    fileMeta.className = 'mt-2 text-sm text-gray-400';
+
+    const sizeRow = document.createElement('div');
+    sizeRow.className = 'flex items-center gap-2';
+    const sizeSpan = document.createElement('span');
+    sizeSpan.textContent = `📏 Dimensione: ${formattedSize}`;
+    sizeRow.appendChild(sizeSpan);
+
+    const typeRow = document.createElement('div');
+    typeRow.className = 'flex items-center gap-2 mt-1';
+    const typeSpan = document.createElement('span');
+    typeSpan.textContent = `📋 Tipo: ${file.type || 'Sconosciuto'}`;
+    typeRow.appendChild(typeSpan);
+
+    fileMeta.appendChild(sizeRow);
+    fileMeta.appendChild(typeRow);
+
+    elements.fileDetails.appendChild(fileHeader);
+    elements.fileDetails.appendChild(fileMeta);
 
     showStatus('send', 'success', '✅ File selezionato con successo!');
     window.setTimeout(() => {
-      elements.status.send.innerHTML = '';
+      elements.status.send.textContent = '';
     }, 3000);
   }
 
@@ -388,11 +411,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const alertType =
       type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
 
-    statusContainer.innerHTML = `
-      <div class="alert ${alertType} shadow-lg mt-4 text-sm p-3">
-        <span>${message}</span>
-      </div>
-    `;
+    // Securely create status message using DOM manipulation to prevent XSS
+    statusContainer.textContent = ''; // Clear previous content
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${alertType} shadow-lg mt-4 text-sm p-3`;
+
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+
+    alertDiv.appendChild(messageSpan);
+    statusContainer.appendChild(alertDiv);
   }
 
   function updateProgress(tab, progress) {
@@ -420,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.sendButton.disabled = true;
 
     Object.values(elements.status).forEach((container) => {
-      container.innerHTML = '';
+      container.textContent = '';
     });
 
     Object.values(elements.progressContainers).forEach((container) => {
