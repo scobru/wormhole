@@ -237,6 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.sendPrompt.classList.add('hidden');
     elements.fileInfoSection.classList.remove('hidden');
     elements.sendButton.disabled = false;
+    elements.sendButton.focus();
 
     const icon = getFileIcon(file.type);
     const formattedSize = formatBytes(file.size);

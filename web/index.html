@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="it" data-theme="dark">
 
 <head>
   <meta charset="UTF-8" />
@@ -82,7 +82,7 @@
               <button type="button" class="btn btn-accent w-full" data-action="copy-code">Copy Code</button>
             </div>
 
-            <div id="send-status" class="mt-4"></div>
+            <div id="send-status" class="mt-4" aria-live="polite"></div>
             <div id="send-progress" class="w-full hidden">
               <progress class="progress progress-accent w-full" value="0" max="100"></progress>
             </div>
@@ -96,7 +96,7 @@
                   class="input input-bordered w-full" />
               </div>
               <button type="button" class="btn btn-accent w-full" id="receive-btn">Connect to Wormhole</button>
-              <div id="receive-status"></div>
+              <div id="receive-status" aria-live="polite"></div>
               <div id="receive-progress" class="w-full hidden">
                 <progress class="progress progress-accent w-full" value="0" max="100"></progress>
               </div>
