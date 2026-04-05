@@ -4,13 +4,14 @@ Shogun Wormhole is a secure P2P file transfer tool built with GunDB, offering bo
 
 ## Features
 
-- 🔒 End-to-end secure file transfers
-- 🌐 P2P architecture using GunDB
-- 📁 IPFS-based file storage
+- 🔒 End-to-end encrypted (E2EE) transfers
+- 💬 Real-time encrypted messaging (Chat)
+- 🌐 P2P architecture using GunDB and SEA
+- 📁 IPFS-based file storage via relay
 - 🖥️ CLI interface for terminal usage
 - 🎨 Modern web interface
 - 🔗 Simple sharing with human-readable codes
-- 🚀 Progress tracking and status updates
+- 🚀 Local discovery via Multicast (LAN)
 - 🔄 Automatic cleanup after transfers
 
 ## Installation
@@ -49,6 +50,10 @@ gwh send <file>
 
 # Receive a file
 gwh receive <code>
+
+# Encrypted Messaging (Chat)
+gwh msg <code>         # Start listening
+gwh msg <code> <text>  # Send a message
 
 # List active transfers
 gwh list
@@ -147,9 +152,10 @@ Default peers:
 
 ## Security
 
-- Files are transferred through IPFS with temporary pinning
-- Automatic cleanup after successful transfers
-- No direct P2P connection required between sender and receiver
+- Files and messages are end-to-end encrypted (E2EE) using AES-GCM (files) and Gun.SEA (messages)
+- The transfer code is used as the decryption key - never shared with relays
+- Files are transferred through IPFS with temporary pinning and automatic cleanup
+- No direct P2P connection or open ports required
 - Human-readable codes are randomly generated and unique
 
 ## Development
