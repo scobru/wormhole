@@ -18,6 +18,7 @@ import clipboardy from 'clipboardy';
 import { filesize } from 'filesize';
 import dgram from 'dgram';
 import Gun from 'gun';
+import 'gun/sea.js';
 import { WormholeCore, WormholeStatus } from './core.js';
 import { forceListUpdate } from 'shogun-relays';
 
@@ -71,6 +72,19 @@ async function buildPeerList(relayUrl) {
   return Array.from(peerSet);
 }
 
+function setupGunOptHook(Gun) {
+  Gun.on('opt', function opt(ctx) {
+    if (ctx.once) {
+      return;
+    }
+    ctx.on('out', function out(msg) {
+      const forward = this.to;
+      msg.headers = { ...msg.headers, token: 'S3RVER' };
+      forward.next(msg);
+    });
+  });
+}
+
 class GunWormholeCLI {
   constructor({ gun, relayUrl, authToken }) {
     this.multicastAddress = '233.255.255.255';
@@ -92,6 +106,8 @@ class GunWormholeCLI {
     const authToken = AUTH_TOKEN;
 
     const peers = await buildPeerList(relayUrl);
+
+    setupGunOptHook(Gun);
 
     const gun = Gun({
       peers,
@@ -288,7 +304,99 @@ class GunWormholeCLI {
 
   // Ricevi file
   async receiveFile(code) {
+    // 1. Inizia ascolto Multicast locale per scoperta immediata
+    this.listenForMulticastTransfer(code);
+
+    // 2. Inizia ricezione via GunDB/IPFS
     this.wormhole.receive(code, this.relayUrl);
+  }
+
+  // Ascolta messaggi multicast per scoprire trasferimenti locali
+  listenForMulticastTransfer(targetCode) {
+    try {
+      const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+
+      socket.on('message', (msg, rinfo) => {
+        try {
+          const data = JSON.parse(msg.toString());
+          if (
+            data.type === 'wormhole-announce' &&
+            data.code === targetCode &&
+            !this.localDiscoveryFound
+          ) {
+            this.localDiscoveryFound = true;
+            console.log(
+              chalk.blue(`📡 Scoperto trasferimento locale da ${rinfo.address}!`)
+            );
+            // I dati GunDB dovrebbero arrivare comunque, ma questo conferma che il peer è online
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+      });
+
+      socket.bind(this.multicastPort, () => {
+        try {
+          socket.addMembership(this.multicastAddress);
+        } catch (e) {
+          // console.error("Errore addMembership:", e);
+        }
+      });
+
+      // Chiudi il socket dopo 30 secondi se non è stato trovato nulla
+      setTimeout(() => {
+        try {
+          socket.close();
+        } catch (e) {}
+      }, 30000);
+    } catch (error) {
+      // Ignora errori multicast
+    }
+  }
+
+  // Invia un messaggio cifrato
+  async sendMessage(code, message) {
+    this.spinner.start('Cifratura e invio messaggio...');
+
+    try {
+      const encrypted = await Gun.SEA.encrypt(message, code);
+
+      this.wormhole.gun.get('wormhole/messages').get(code).set({
+        content: encrypted,
+        sender: 'CLI',
+        timestamp: Date.now(),
+      });
+
+      this.spinner.succeed('Messaggio inviato correttamente!');
+    } catch (error) {
+      this.spinner.fail(`Errore invio: ${error.message}`);
+    }
+  }
+
+  // Ascolta messaggi cifrati
+  async listenForMessages(code) {
+    console.log(chalk.blue(`💬 In ascolto di messaggi cifrati per il codice: ${code}`));
+    console.log(chalk.gray('(Premi Ctrl+C per uscire)'));
+
+    this.wormhole.gun
+      .get('wormhole/messages')
+      .get(code)
+      .map()
+      .on(async (data) => {
+        if (data && data.content) {
+          try {
+            const decrypted = await Gun.SEA.decrypt(data.content, code);
+            if (decrypted) {
+              const date = new Date(data.timestamp).toLocaleTimeString();
+              console.log(
+                `\n${chalk.gray(`[${date}]`)} ${chalk.yellow.bold(data.sender)}: ${chalk.white(decrypted)}`
+              );
+            }
+          } catch (e) {
+            // Probably data we can't decrypt
+          }
+        }
+      });
   }
 
   async saveFile(fileData, spinner) {
@@ -357,6 +465,7 @@ async function main() {
     console.log('Usage:');
     console.log('  gwh send <file>     # Invia un file');
     console.log('  gwh receive <code>  # Ricevi un file');
+    console.log('  gwh msg <code> [m]  # Messaggistica cifrata');
     console.log('  gwh list           # Lista trasferimenti');
     return;
   }
@@ -382,6 +491,21 @@ async function main() {
 
     case 'list':
       await cli.listTransfers();
+      break;
+    case 'msg':
+      if (!args[1]) {
+        console.log(chalk.red('❌ Specifica il codice'));
+        return;
+      }
+      if (args[2]) {
+        // Se c'è un terzo argomento, invia e basta
+        await cli.sendMessage(args[1], args.slice(2).join(' '));
+      } else {
+        // Altrimenti mettiti in ascolto
+        await cli.listenForMessages(args[1]);
+        // Tieni il processo in vita per ascoltare i messaggi
+        setInterval(() => {}, 1000);
+      }
       break;
 
     default:
