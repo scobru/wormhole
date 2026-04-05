@@ -8,12 +8,14 @@
     "gwh": "src/index.js"
   },
   "scripts": {
+    "cli": "node src/index.js",
     "build": "cd web && yarn install && yarn build && cd .. && rm -rf dist && cp -r web/dist dist",
     "dev": "cd web && yarn dev",
     "start": "npx serve dist",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "format": "prettier --write ."
+
   },
   "keywords": [
     "gundb",
