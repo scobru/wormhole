@@ -1,192 +1,119 @@
 # 🌌 Shogun Wormhole
 
-Shogun Wormhole is a secure P2P file transfer tool built with GunDB, offering both a CLI interface and a web interface for seamless file sharing.
+A high-performance, decentralised P2P file transfer and encrypted messaging tool built on the Shogun ecosystem. Shogun Wormhole provides end-to-end encrypted sharing through both a CLI interface and a modern web dashboard.
 
-## Features
+## 🚀 Overview
 
-- 🔒 End-to-end encrypted (E2EE) transfers
-- 💬 Real-time encrypted messaging (Chat)
-- 🌐 P2P architecture using GunDB and SEA
-- 📁 IPFS-based file storage via relay
-- 🖥️ CLI interface for terminal usage
-- 🎨 Modern web interface
-- 🔗 Simple sharing with human-readable codes
-- 🚀 Local discovery via Multicast (LAN)
-- 🔄 Automatic cleanup after transfers
+Shogun Wormhole uses a hybrid architecture for reliable and privacy-focused communication:
+- **GunDB**: For real-time metadata exchange, presence, and status synchronization.
+- **Gun.SEA**: For secure, decentralized identity and message encryption.
+- **IPFS Relay**: For temporary, secure hosting of encrypted file chunks.
+- **E2E Encryption**: All files and messages are encrypted on the client using AES-GCM or SEA before transmission.
+- **Local Discovery**: Automatic peer finding on local networks via UDP Multicast.
 
-## Installation
+---
 
-### CLI Tool
+## 🛠️ Features
+
+- 🔐 **End-to-End Secure (E2EE)**: Files and messages are encrypted with the transfer code as the key.
+- 💬 **Encrypted Chat**: Real-time messaging between peers using the same mnemonic code.
+- 📦 **Shared Core**: Identical transfer logic across CLI and Web for consistent performance.
+- 📡 **Dynamic Relays**: Automatic discovery of healthy network peers via `shogun-relays`.
+- 🔗 **Mnemonic Codes**: Simple, human-readable sharing codes (e.g., `5-brave-fire`).
+- 🏎️ **LAN Discovery**: Super-fast peer discovery on local networks using Multicast (UDP).
+- 🔄 **Auto Cleanup**: Files are automatically unpinned and metadata cleared after transfers.
+
+---
+
+## 💻 CLI Interface
+
+### Installation
 
 ```bash
-# Install globally
+# Global installation
 npm install -g gundb-wormhole
 
-# Or run directly with npx
-npx gundb-wormhole
+# Or run instantly with npx
+npx whole send <file-path>
 ```
 
-### Web Interface
+### Commands
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/shogun-wormhole.git
+| Command | Description |
+|---------|-------------|
+| `whole send <file>` | Encrypts and uploads a file, generating a sharing code. |
+| `whole receive <code>` | Downloads and decrypts a file using the provided code. |
+| `whole msg <code>` | Starts an encrypted chat listener for the given code. |
+| `whole msg <code> <text>` | Sends a single encrypted message and exits. |
+| `whole list` | Lists currently active transfers (experimental). |
 
-# Install dependencies
-cd shogun-wormhole
-npm install
+---
 
-# Start the web interface
-npm start
+## 🌐 Web Application
+
+### Local Development
+
+1. Navigate to the web directory:
+   ```bash
+   cd web
+   npm install
+   ```
+
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+The web interface will be available at `http://localhost:5173` (default Vite port).
+
+---
+
+## 🏗️ Project Structure
+
+```text
+shogun-wormhole/
+├── src/
+│   ├── index.js              # CLI Application (gwh)
+│   └── core.js               # CLI proxy for shared logic
+├── web/
+│   ├── src/
+│   │   ├── shared/
+│   │   │   └── wormhole-core.js # SHARED LOGIC (Encryption, Gun, IPFS)
+│   │   └── main.js           # Frontend Logic
+│   └── index.html            # Web Entry Point
+├── package.json              # Main project config and CLI binary (gwh)
+└── output.txt                # System diagnostics / Debug output
 ```
 
-## Usage
+---
 
-### CLI Interface
+## ⚙️ Configuration
 
-```bash
-# Send a file
-gwh send <file>
+The application uses environment variables for relay and authorization configuration.
 
-# Receive a file
-gwh receive <code>
+| Variable | Description |
+|----------|-------------|
+| `VITE_RELAY_URL` | The URL of the Shogun/IPFS relay. |
+| `VITE_AUTH_TOKEN` | Bearer token for authorized upload access to the relay. |
 
-# Encrypted Messaging (Chat)
-gwh msg <code>         # Start listening
-gwh msg <code> <text>  # Send a message
+---
 
-# List active transfers
-gwh list
-```
+## 🛡️ Security & Privacy
 
-### Web Interface
+1. **Protocol Isolation**: Relays only see encrypted chunks; they never see filenames or keys.
+2. **Deterministic Keys**: Cryptographic keys are derived from the mnemonic code using PBKDF2/SEA.
+3. **No Central Logs**: All coordination happens on the decentralized Gun graph.
+4. **Instant Cleanup**: Successful transfers trigger an `unpin` request to the IPFS relay.
 
-1. Open `http://localhost:3000` in your browser
-2. Choose "Send" or "Receive"
-3. For sending:
-   - Drop a file or click to select
-   - Share the generated code with the recipient
-4. For receiving:
-   - Enter the code provided by the sender
-   - The file will download automatically
+---
 
-## Architecture
+## 🤝 Shogun Network
 
-### Core Components
+This tool is part of the Shogun ecosystem:
+- **[shogun-auth](../shogun-auth)**: Unified identity management.
+- **[shogun-relays](../shogun-relays)**: Dynamic relay discovery.
 
-#### WormholeCore (`core.js`)
+---
 
-The core module handles the file transfer logic:
-
-- File chunking and reassembly
-- GunDB synchronization
-- IPFS integration
-- Progress tracking
-- Status management
-
-```javascript
-const wormhole = new WormholeCore({
-  gun: gunInstance,
-  onStatusChange: handleStatus,
-  onProgress: handleProgress
-});
-
-// Send a file
-const code = await wormhole.send({
-  file: fileBlob,
-  relayUrl: "https://relay.example.com",
-  authToken: "your-token"
-});
-
-// Receive a file
-wormhole.receive(code, relayUrl);
-```
-
-#### CLI Interface (`index.js`)
-
-The CLI tool provides terminal-based access:
-
-- File sending/receiving via command line
-- Progress spinners and status updates
-- Local network discovery via multicast
-- Error handling and recovery
-
-#### Web Interface (`interface/index.html`)
-
-Modern web UI built with:
-
-- DaisyUI components
-- Tailwind CSS styling
-- Drag-and-drop support
-- Real-time progress updates
-- Responsive design
-
-## Status Codes
-
-The system uses various status codes to track transfer progress:
-
-| Status      | Description                           |
-|-------------|---------------------------------------|
-| uploading   | File is being uploaded to IPFS        |
-| pinning     | Waiting for IPFS pin confirmation     |
-| sent        | File ready for recipient              |
-| connecting  | Searching for transfer                |
-| downloading | File download in progress             |
-| completed   | Transfer successfully completed        |
-| error       | An error occurred                     |
-
-## Configuration
-
-### Environment Variables
-
-- `RELAY_URL`: IPFS relay server URL
-- `AUTH_TOKEN`: Authentication token for relay
-- `MULTICAST_ADDRESS`: Local network discovery address
-- `MULTICAST_PORT`: Local network discovery port
-
-### GunDB Peers
-
-Default peers:
-- `https://peer.wallie.io/gun`
-- `https://gun-manhattan.herokuapp.com/gun`
-
-## Security
-
-- Files and messages are end-to-end encrypted (E2EE) using AES-GCM (files) and Gun.SEA (messages)
-- The transfer code is used as the decryption key - never shared with relays
-- Files are transferred through IPFS with temporary pinning and automatic cleanup
-- No direct P2P connection or open ports required
-- Human-readable codes are randomly generated and unique
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Credits
-
-Built with:
-- [GunDB](https://gun.eco/)
-- [IPFS](https://ipfs.io/)
-- [DaisyUI](https://daisyui.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
+Built with ❤️ by [scobru](https://github.com/scobru).  
+*Securing the decentralized web, one chunk at a time.*
