@@ -15,7 +15,6 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "format": "prettier --write ."
-
   },
   "keywords": [
     "gundb",
@@ -31,10 +30,10 @@
     "clipboardy": "^4.0.0",
     "dotenv": "^17.2.3",
     "filesize": "^10.1.0",
-    "gun": "https://github.com/scobru/gun",
     "ora": "^8.0.1",
     "shogun-relays": "https://github.com/scobru/shogun-relays",
-    "vercel": "^50.22.1"
+    "vercel": "^50.22.1",
+    "zen": "github:akaoio/zen"
   },
   "devDependencies": {
     "eslint": "^8.57.0",

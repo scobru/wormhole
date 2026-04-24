@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * GunDB Wormhole CLI
+ * ZenWormhole CLI
  * Trasferimento file P2P da terminale
  *
  * Usage:
@@ -17,10 +17,9 @@ import ora from 'ora';
 import clipboardy from 'clipboardy';
 import { filesize } from 'filesize';
 import dgram from 'dgram';
-import Gun from 'gun';
-import 'gun/sea.js';
+import ZEN from 'zen';
+
 import { WormholeCore, WormholeStatus } from './core.js';
-import { forceListUpdate } from 'shogun-relays';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -29,11 +28,7 @@ const RELAY_URL = process.env.VITE_RELAY_URL;
 const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN;
 
 const DEFAULT_PEERS = [
-  'https://gun.defucc.me/gun',
-  'https://a.talkflow.team/gun',
-  'https://peer.wallie.io/gun',
-  'https://shogun-relay.scobrudot.dev/gun',
-  'https://shogun-linda-relay.scobrudot.dev/gun',
+  'https://shogun-relay.scobrudot.dev/zen'
 ];
 
 async function buildPeerList(relayUrl) {
@@ -41,51 +36,21 @@ async function buildPeerList(relayUrl) {
 
   if (typeof relayUrl === 'string' && relayUrl.trim().length > 0) {
     const sanitized = relayUrl.replace(/\/$/, '');
-    peerSet.add(`${sanitized}/gun`);
+    peerSet.add(`${sanitized}/zen`);
 
     if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
       const wssPeer = sanitized.replace(/^http/, 'ws');
-      peerSet.add(`${wssPeer}/gun`);
+      peerSet.add(`${wssPeer}/zen`);
     }
-  }
-
-  try {
-    const relays = await forceListUpdate();
-    const relayArray = Array.isArray(relays)
-      ? relays
-      : Array.isArray(relays?.relays)
-        ? relays.relays
-        : [];
-
-    relayArray.forEach((peer) => {
-      if (typeof peer === 'string' && peer.trim().length > 0) {
-        peerSet.add(peer.trim());
-      }
-    });
-  } catch (error) {
-    console.warn(
-      'Impossibile aggiornare la lista dei peer da shogun-relays:',
-      error
-    );
   }
 
   return Array.from(peerSet);
 }
 
-function setupGunOptHook(Gun) {
-  Gun.on('opt', function opt(ctx) {
-    if (ctx.once) {
-      return;
-    }
-    ctx.on('out', function out(msg) {
-      const forward = this.to;
-      msg.headers = { ...msg.headers, token: 'S3RVER' };
-      forward.next(msg);
-    });
-  });
-}
+// Zen handles headers and authentication differently, skipping Gun-specific opt hook
 
-class GunWormholeCLI {
+
+class ZenWormholeCLI {
   constructor({ gun, relayUrl, authToken }) {
     this.multicastAddress = '233.255.255.255';
     this.multicastPort = 8765;
@@ -107,15 +72,12 @@ class GunWormholeCLI {
 
     const peers = await buildPeerList(relayUrl);
 
-    setupGunOptHook(Gun);
-
-    const gun = Gun({
+    const gun = ZEN({
       peers,
       localStorage: false,
-      radisk: false,
     });
 
-    return new GunWormholeCLI({ gun, relayUrl, authToken });
+    return new ZenWormholeCLI({ gun, relayUrl, authToken });
   }
 
   handleStatusChange({ code, status, message, metadata, fileData }) {
@@ -307,7 +269,7 @@ class GunWormholeCLI {
     // 1. Inizia ascolto Multicast locale per scoperta immediata
     this.listenForMulticastTransfer(code);
 
-    // 2. Inizia ricezione via GunDB/IPFS
+    // 2. Inizia ricezione via Zen/IPFS
     this.wormhole.receive(code, this.relayUrl);
   }
 
@@ -328,7 +290,7 @@ class GunWormholeCLI {
             console.log(
               chalk.blue(`📡 Scoperto trasferimento locale da ${rinfo.address}!`)
             );
-            // I dati GunDB dovrebbero arrivare comunque, ma questo conferma che il peer è online
+            // I dati Zen dovrebbero arrivare comunque, ma questo conferma che il peer è online
           }
         } catch (e) {
           // Ignore parse errors
@@ -347,7 +309,7 @@ class GunWormholeCLI {
       setTimeout(() => {
         try {
           socket.close();
-        } catch (e) {}
+        } catch (e) { }
       }, 30000);
     } catch (error) {
       // Ignora errori multicast
@@ -359,7 +321,7 @@ class GunWormholeCLI {
     this.spinner.start('Cifratura e invio messaggio...');
 
     try {
-      const encrypted = await Gun.SEA.encrypt(message, code);
+      const encrypted = await ZEN.encrypt(message, code);
 
       this.wormhole.gun.get('wormhole/messages').get(code).set({
         content: encrypted,
@@ -385,7 +347,7 @@ class GunWormholeCLI {
       .on(async (data) => {
         if (data && data.content) {
           try {
-            const decrypted = await Gun.SEA.decrypt(data.content, code);
+            const decrypted = await ZEN.decrypt(data.content, code);
             if (decrypted) {
               const date = new Date(data.timestamp).toLocaleTimeString();
               console.log(
@@ -457,10 +419,10 @@ class GunWormholeCLI {
 // CLI Interface
 async function main() {
   const args = process.argv.slice(2);
-  const cli = await GunWormholeCLI.create();
+  const cli = await ZenWormholeCLI.create();
 
   if (args.length === 0) {
-    console.log(chalk.blue('🌌 GunDB Wormhole CLI'));
+    console.log(chalk.blue('🌌 ZenWormhole CLI'));
     console.log(chalk.gray('Trasferimento file P2P sicuro\n'));
     console.log('Usage:');
     console.log('  gwh send <file>     # Invia un file');
@@ -504,7 +466,7 @@ async function main() {
         // Altrimenti mettiti in ascolto
         await cli.listenForMessages(args[1]);
         // Tieni il processo in vita per ascoltare i messaggi
-        setInterval(() => {}, 1000);
+        setInterval(() => { }, 1000);
       }
       break;
 

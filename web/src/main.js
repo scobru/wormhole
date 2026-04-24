@@ -1,4 +1,6 @@
 import { WormholeCore, WormholeStatus } from '@wormhole/core';
+import ZEN from 'zen';
+
 
 
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
@@ -27,14 +29,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('Impossibile caricare shogun-relays:', error);
       }
     }
-    const gunGlobal = window.Gun;
+    // Shogun-relays usually injects itself globally in the browser, 
+    // but we can also use the imported ZEN directly.
+    const zenInstance = ZEN;
 
-    if (!gunGlobal) {
-      console.error('Gun non è stato caricato correttamente.');
+    if (!zenInstance) {
+      console.error('Zen non è stato caricato correttamente.');
       return;
     }
 
-    setupGunOptHook(gunGlobal);
 
     const relayManager = window.ShogunRelays;
 
@@ -64,10 +67,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    const gunInstance = gunGlobal({
+    const gunInstance = zenInstance({
       peers: Array.from(peerSet),
       localStorage: false,
-      radisk: false,
     });
 
     wormhole = new WormholeCore({
@@ -571,16 +573,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-function setupGunOptHook(Gun) {
-  Gun.on('opt', function opt(ctx) {
-    if (ctx.once) {
-      return;
-    }
-    ctx.on('out', function out(msg) {
-      const forward = this.to;
-      msg.headers = { ...msg.headers, token: 'S3RVER' };
-      forward.next(msg);
-    });
-  });
-}
+// Zen handles headers and authentication differently, skipping Gun-specific opt hook
+
 
