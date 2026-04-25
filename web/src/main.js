@@ -1,8 +1,6 @@
 import { WormholeCore, WormholeStatus } from '@wormhole/core';
 import ZEN from 'zen';
 
-
-
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -22,34 +20,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let wormhole = null;
 
   const initPromise = (async () => {
-    if (typeof window !== 'undefined' && !window.ShogunRelays) {
-      try {
-        await import('shogun-relays');
-      } catch (error) {
-        console.warn('Impossibile caricare shogun-relays:', error);
-      }
-    }
-    // Shogun-relays usually injects itself globally in the browser, 
-    // but we can also use the imported ZEN directly.
     const zenInstance = ZEN;
 
     if (!zenInstance) {
       console.error('Zen non è stato caricato correttamente.');
       return;
-    }
-
-
-    const relayManager = window.ShogunRelays;
-
-    let relays = [];
-    try {
-      if (relayManager?.forceListUpdate) {
-        relays = await relayManager.forceListUpdate();
-      } else {
-        console.warn('ShogunRelays.forceListUpdate non disponibile. Uso relay di default.');
-      }
-    } catch (error) {
-      console.warn('Impossibile recuperare l\'elenco dei relay:', error);
     }
 
     const defaultPeers = [
@@ -61,13 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
 
     const peerSet = new Set(defaultPeers);
-    relays.forEach((relayUrl) => {
-      if (typeof relayUrl === 'string' && relayUrl.trim().length > 0) {
-        peerSet.add(relayUrl);
-      }
-    });
 
-    const gunInstance = zenInstance({
+    const gunInstance = new zenInstance({
       peers: Array.from(peerSet),
       localStorage: false,
     });
