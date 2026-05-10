@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 
 /**
- * ZenWormhole CLI
+ * WORMHOLE CLI
  * Trasferimento file P2P da terminale
  *
  * Usage:
- *   gwh send <file>           # Invia un file
- *   gwh receive <code>        # Ricevi un file
- *   gwh list                  # Lista trasferimenti attivi
+ *   wormhole send <file>           # Invia un file
+ *   wormhole receive <code>        # Ricevi un file
+ *   wormhole list                  # Lista trasferimenti attivi
  */
 
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import ora from 'ora';
 import clipboardy from 'clipboardy';
 import { filesize } from 'filesize';
@@ -21,8 +22,11 @@ import ZEN from 'zen';
 
 import { WormholeCore, WormholeStatus } from './core.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../web/.env') });
 
 const RELAY_URL = process.env.VITE_RELAY_URL;
 const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN;
@@ -50,7 +54,7 @@ async function buildPeerList(relayUrl) {
 // Zen handles headers and authentication differently, skipping Gun-specific opt hook
 
 
-class ZenWormholeCLI {
+class WormholeCLI {
   constructor({ gun, relayUrl, authToken }) {
     this.multicastAddress = '233.255.255.255';
     this.multicastPort = 8765;
@@ -72,12 +76,12 @@ class ZenWormholeCLI {
 
     const peers = await buildPeerList(relayUrl);
 
-    const gun = ZEN({
+    const gun = new ZEN({
       peers,
       localStorage: false,
     });
 
-    return new ZenWormholeCLI({ gun, relayUrl, authToken });
+    return new WormholeCLI({ gun, relayUrl, authToken });
   }
 
   handleStatusChange({ code, status, message, metadata, fileData }) {
@@ -103,7 +107,7 @@ class ZenWormholeCLI {
         console.log(chalk.green.bold('\n🎯 Condividi questo codice:'));
         console.log(chalk.black.bgWhite(` ${code} `));
         console.log(chalk.gray('\nComando per il ricevente:'));
-        console.log(chalk.cyan(`gwh receive ${code}`));
+        console.log(chalk.cyan(`wormhole receive ${code}`));
         console.log(
           chalk.yellow(
             '\nQuesto codice è anche la chiave di decrittazione end-to-end. Mantienilo segreto.'
@@ -419,16 +423,16 @@ class ZenWormholeCLI {
 // CLI Interface
 async function main() {
   const args = process.argv.slice(2);
-  const cli = await ZenWormholeCLI.create();
+  const cli = await WormholeCLI.create();
 
   if (args.length === 0) {
-    console.log(chalk.blue('🌌 ZenWormhole CLI'));
+    console.log(chalk.blue('🌌 WORMHOLE CLI'));
     console.log(chalk.gray('Trasferimento file P2P sicuro\n'));
     console.log('Usage:');
-    console.log('  gwh send <file>     # Invia un file');
-    console.log('  gwh receive <code>  # Ricevi un file');
-    console.log('  gwh msg <code> [m]  # Messaggistica cifrata');
-    console.log('  gwh list           # Lista trasferimenti');
+    console.log('  wormhole send <file>     # Invia un file');
+    console.log('  wormhole receive <code>  # Ricevi un file');
+    console.log('  wormhole msg <code> [m]  # Messaggistica cifrata');
+    console.log('  wormhole list           # Lista trasferimenti');
     return;
   }
 
