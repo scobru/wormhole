@@ -344,12 +344,15 @@ class WormholeCLI {
     console.log(chalk.blue(`💬 In ascolto di messaggi cifrati per il codice: ${code}`));
     console.log(chalk.gray('(Premi Ctrl+C per uscire)'));
 
+    const seen = new Set();
+
     this.wormhole.gun
       .get('wormhole/messages')
       .get(code)
       .map()
-      .on(async (data) => {
-        if (data && data.content) {
+      .on(async (data, key) => {
+        if (data && data.content && !seen.has(key)) {
+          seen.add(key);
           try {
             const decrypted = await ZEN.decrypt(data.content, code);
             if (decrypted) {
