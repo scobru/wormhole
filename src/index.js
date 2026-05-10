@@ -321,7 +321,7 @@ class WormholeCLI {
   }
 
   // Invia un messaggio cifrato
-  async sendMessage(code, message) {
+  async sendMessage(code, message, sender = 'CLI') {
     this.spinner.start('Cifratura e invio messaggio...');
 
     try {
@@ -329,7 +329,7 @@ class WormholeCLI {
 
       this.wormhole.gun.get('wormhole/messages').get(code).set({
         content: encrypted,
-        sender: 'CLI',
+        sender: sender,
         timestamp: Date.now(),
       });
 
@@ -431,7 +431,7 @@ async function main() {
     console.log('Usage:');
     console.log('  wormhole send <file>     # Invia un file');
     console.log('  wormhole receive <code>  # Ricevi un file');
-    console.log('  wormhole msg <code> [m]  # Messaggistica cifrata');
+    console.log('  wormhole msg <code> [nick] [message]  # Messaggistica cifrata');
     console.log('  wormhole list           # Lista trasferimenti');
     return;
   }
@@ -458,14 +458,21 @@ async function main() {
     case 'list':
       await cli.listTransfers();
       break;
+
     case 'msg':
       if (!args[1]) {
         console.log(chalk.red('❌ Specifica il codice'));
         return;
       }
-      if (args[2]) {
-        // Se c'è un terzo argomento, invia e basta
-        await cli.sendMessage(args[1], args.slice(2).join(' '));
+
+      if (args.length >= 4) {
+        // wormhole msg <code> <nick> <message>
+        await cli.sendMessage(args[1], args.slice(3).join(' '), args[2]);
+        setTimeout(() => process.exit(0), 1000);
+      } else if (args.length === 3) {
+        // wormhole msg <code> <message>
+        await cli.sendMessage(args[1], args[2]);
+        setTimeout(() => process.exit(0), 1000);
       } else {
         // Altrimenti mettiti in ascolto
         await cli.listenForMessages(args[1]);
