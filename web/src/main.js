@@ -1,4 +1,4 @@
-import { WormholeCore, WormholeStatus } from '@wormhole/core';
+import { WormholeCore, WormholeStatus, generateCode } from '@wormhole/core';
 import ZEN from 'zen';
 
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
@@ -28,11 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const defaultPeers = [
-      'https://shogun-relay.scobrudot.dev/gun',
-      'https://shogun-linda-relay.scobrudot.dev/gun',
-      'https://peer.wallie.io/gun',
-      'https://gun.defucc.me/gun',
-      'https://a.talkflow.team/gun',
+      'https://shogun-relay.scobrudot.dev/zen'
     ];
 
     const peerSet = new Set(defaultPeers);
@@ -109,6 +105,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     elements.receiveButton.addEventListener('click', () => {
       connectToSender();
+    });
+
+    elements.chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void sendChatMessage();
+    });
+
+    elements.createChatBtn.addEventListener('click', () => {
+      void createChatOnly();
+    });
+
+    elements.joinChatBtn.addEventListener('click', () => {
+      void joinChatOnly();
+    });
+
+    elements.fullscreenBtn.addEventListener('click', () => {
+      elements.chatSection.classList.toggle('fullscreen');
+      // Scroll to bottom after resizing
+      setTimeout(() => {
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+      }, 100);
     });
   }
 
@@ -291,6 +308,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.transferCodeDisplay.textContent = transferCode;
       elements.codeSection.classList.remove('hidden');
       elements.fileInfoSection.classList.add('hidden');
+
+      startChat(transferCode);
     } catch (error) {
       console.error(error);
       showStatus('send', 'error', `❌ Upload fallito: ${error.message ?? 'Errore sconosciuto'}`);
@@ -322,8 +341,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     state.transferInProgress = true;
+    state.currentCode = code;
     setButtonLoading(elements.receiveButton, true, 'Connecting...');
     wormhole.receive(code, RELAY_URL);
+
+    startChat(code);
+  }
+
+  async function createChatOnly() {
+    if (!wormhole) {
+      await initPromise;
+    }
+
+    const code = generateCode();
+    state.currentCode = code;
+    state.chatRole = elements.nicknameInput.value.trim() || 'User A';
+
+    showStatus('chat-only', 'success', `✅ Chat creata! Codice: ${code}`);
+    startChat(code);
+
+    // Announce presence in Gun for this code so the other side can find it if they are looking
+    wormhole.gun.get(code).put({ type: 'chat-only', createdAt: Date.now() });
+  }
+
+  async function joinChatOnly() {
+    const code = elements.chatOnlyInput.value.trim();
+    if (!code) {
+      showStatus('chat-only', 'error', 'Inserisci un codice per unirti.');
+      return;
+    }
+
+    if (!wormhole) {
+      await initPromise;
+    }
+
+    state.currentCode = code;
+    state.chatRole = elements.nicknameInput.value.trim() || 'User B';
+    showStatus('chat-only', 'info', `Connessione alla chat: ${code}...`);
+    startChat(code);
   }
 
   function handleStatusChange({ status, message, metadata, fileData }) {
@@ -443,6 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.selectedFile = null;
     state.transferInProgress = false;
     state.currentCode = null;
+    state.chatRole = null;
 
     elements.fileInput.value = '';
     elements.transferCodeDisplay.textContent = '';
@@ -466,6 +522,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     elements.receiveCodeInput.value = '';
+    elements.chatOnlyInput.value = '';
+    elements.nicknameInput.value = '';
+
+    elements.chatSection.classList.add('hidden');
+    elements.chatMessages.innerHTML = '';
+    elements.chatInput.value = '';
+    elements.chatSection.classList.remove('fullscreen');
 
     switchTab('send');
   }
@@ -485,6 +548,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     URL.revokeObjectURL(url);
   }
 
+  function startChat(code) {
+    elements.chatSection.classList.remove('hidden');
+    elements.chatMessages.innerHTML = '<div class="text-center text-xs opacity-40 py-2">Messages are end-to-end encrypted</div>';
+
+    const seen = new Set();
+
+    wormhole.gun
+      .get('wormhole/messages')
+      .get(code)
+      .map()
+      .on(async (data, key) => {
+        if (data && data.content && !seen.has(key)) {
+          seen.add(key);
+          try {
+            // Check if ZEN.decrypt is available, otherwise it might be in the core
+            // In the CLI it's ZEN.decrypt
+            const decrypted = await ZEN.decrypt(data.content, code);
+            if (decrypted) {
+              renderMessage(data.sender, decrypted, data.timestamp);
+            }
+          } catch (e) {
+            console.warn('Could not decrypt message:', e);
+          }
+        }
+      });
+  }
+
+  async function sendChatMessage() {
+    const message = elements.chatInput.value.trim();
+    if (!message || !state.currentCode) return;
+
+    elements.chatInput.value = '';
+    let sender;
+    if (state.activeTab === 'chat-only') {
+      sender = state.chatRole || 'User';
+    } else {
+      sender = state.activeTab === 'send' ? 'Sender' : 'Receiver';
+    }
+
+    try {
+      const encrypted = await ZEN.encrypt(message, state.currentCode);
+
+      wormhole.gun.get('wormhole/messages').get(state.currentCode).set({
+        content: encrypted,
+        sender: sender,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      showStatus(state.activeTab, 'error', '❌ Errore invio messaggio');
+    }
+  }
+
+  function renderMessage(sender, text, timestamp) {
+    const isMe = (state.activeTab === 'send' && sender === 'Sender') ||
+      (state.activeTab === 'receive' && sender === 'Receiver') ||
+      (state.activeTab === 'chat-only' && sender === state.chatRole);
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat ${isMe ? 'chat-end' : 'chat-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`;
+
+    const header = document.createElement('div');
+    header.className = 'chat-header opacity-50 text-xs mb-1 flex items-center gap-2';
+    header.textContent = sender;
+
+    const time = document.createElement('time');
+    time.className = 'text-[10px] opacity-40';
+    time.textContent = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    header.appendChild(time);
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble shadow-md max-w-[85%] text-sm ${isMe ? 'chat-bubble-accent' : 'chat-bubble-secondary'}`;
+    bubble.textContent = text;
+
+    messageDiv.appendChild(header);
+    messageDiv.appendChild(bubble);
+
+    elements.chatMessages.appendChild(messageDiv);
+    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+  }
+
   function getDomElements() {
     return {
       fileInput: document.getElementById('fileInput'),
@@ -501,10 +645,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       tabPanels: {
         send: document.querySelector('[data-tab-panel="send"]'),
         receive: document.querySelector('[data-tab-panel="receive"]'),
+        'chat-only': document.querySelector('[data-tab-panel="chat-only"]'),
       },
       status: {
         send: document.getElementById('send-status'),
         receive: document.getElementById('receive-status'),
+        'chat-only': document.getElementById('chat-only-status'),
       },
       progressContainers: {
         send: document.getElementById('send-progress'),
@@ -514,6 +660,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         send: document.querySelector('#send-progress progress'),
         receive: document.querySelector('#receive-progress progress'),
       },
+      chatSection: document.getElementById('chat-section'),
+      chatMessages: document.getElementById('chat-messages'),
+      chatInput: document.getElementById('chat-input'),
+      chatForm: document.getElementById('chat-form'),
+      createChatBtn: document.getElementById('create-chat-btn'),
+      joinChatBtn: document.getElementById('join-chat-btn'),
+      chatOnlyInput: document.getElementById('chat-only-code'),
+      nicknameInput: document.getElementById('chat-nickname'),
+      fullscreenBtn: document.getElementById('fullscreen-chat-btn'),
     };
   }
 

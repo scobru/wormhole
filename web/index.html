@@ -30,12 +30,37 @@
       outline: 2px solid hsl(var(--a));
       outline-offset: 2px;
     }
+
+    /* Fullscreen Chat Styles */
+    #chat-section.fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1000;
+      background-color: hsl(var(--b1));
+      padding: 2rem;
+      margin-top: 0 !important;
+      display: flex;
+      flex-direction: column;
+      border-top: none !important;
+    }
+
+    #chat-section.fullscreen #chat-messages {
+      flex: 1;
+      height: auto !important;
+    }
+
+    #chat-section.fullscreen .chat-header-actions {
+      margin-bottom: 2rem;
+    }
   </style>
 </head>
 
 <body class="antialiased flex flex-col min-h-screen">
   <div class="flex-1 flex items-center justify-center p-4">
-    <div class="card w-full max-w-sm">
+    <div class="card w-full max-w-2xl bg-base-100 shadow-2xl">
       <div class="p-8">
         <div class="flex flex-col items-center">
           <img src="/logo.svg" alt="Wormhole Logo" class="h-16 w-16 mb-4" />
@@ -46,6 +71,7 @@
           <div class="tabs tabs-boxed bg-base-200 mb-8" role="tablist" aria-label="Transfer mode" data-tab-group="wormhole">
             <button type="button" role="tab" class="tab tab-active" data-tab-button="send" aria-selected="true" aria-controls="send-tab" id="tab-send">Send</button>
             <button type="button" role="tab" class="tab" data-tab-button="receive" aria-selected="false" aria-controls="receive-tab" id="tab-receive">Receive</button>
+            <button type="button" role="tab" class="tab" data-tab-button="chat-only" aria-selected="false" aria-controls="chat-only-tab" id="tab-chat-only">Chat</button>
           </div>
 
           <div id="send-tab" role="tabpanel" aria-labelledby="tab-send" class="w-full space-y-4" data-tab-panel="send">
@@ -98,6 +124,69 @@
                 <progress class="progress progress-accent w-full" value="0" max="100"></progress>
               </div>
             </div>
+          </div>
+
+          <div id="chat-only-tab" role="tabpanel" aria-labelledby="tab-chat-only" class="w-full hidden" data-tab-panel="chat-only">
+            <div class="space-y-6">
+              <div class="bg-base-200 p-4 rounded-xl space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2" for="chat-nickname">Your Nickname (Optional)</label>
+                  <input type="text" id="chat-nickname" placeholder="e.g.: Satoshi" maxlength="20"
+                    class="input input-bordered w-full focus:input-accent" />
+                </div>
+                
+                <div class="divider text-xs opacity-40">CHOOSE ACTION</div>
+
+                <div class="flex flex-col gap-3">
+                  <button type="button" class="btn btn-outline btn-accent w-full" id="create-chat-btn">
+                    Create New Secure Chat
+                  </button>
+                  <div class="divider text-xs opacity-40">OR</div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2" for="chat-only-code">Join with Code</label>
+                    <div class="flex gap-2">
+                      <input type="text" id="chat-only-code" placeholder="e.g.: 7-guitar-horse" maxlength="50"
+                        class="input input-bordered flex-1 focus:input-accent" />
+                      <button type="button" class="btn btn-accent" id="join-chat-btn">Join</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="chat-only-status" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- Chat Section -->
+          <div id="chat-section" class="w-full mt-8 hidden border-t border-base-300 pt-6">
+            <div class="flex items-center justify-between mb-4 chat-header-actions">
+              <h3 class="text-lg font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                Secure Chat
+              </h3>
+              <div class="flex items-center gap-2">
+                <button type="button" id="fullscreen-chat-btn" class="btn btn-ghost btn-xs btn-square" title="Toggle Fullscreen">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                </button>
+                <span class="badge badge-accent badge-outline text-xs">E2EE</span>
+              </div>
+            </div>
+            
+            <div id="chat-messages" class="h-64 overflow-y-auto bg-base-200 rounded-xl p-4 mb-4 space-y-3 flex flex-col scroll-smooth">
+              <div class="text-center text-xs opacity-40 py-2">Messages are end-to-end encrypted</div>
+            </div>
+            
+            <form id="chat-form" class="flex gap-2">
+              <input type="text" id="chat-input" placeholder="Type a message..." class="input input-bordered flex-1 focus:input-accent" autocomplete="off" />
+              <button type="submit" id="chat-send-btn" class="btn btn-accent btn-square">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </form>
           </div>
         </div>
       </div>
