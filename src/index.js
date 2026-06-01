@@ -32,7 +32,7 @@ const RELAY_URL = process.env.VITE_RELAY_URL;
 const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN;
 
 const DEFAULT_PEERS = [
-  'https://shogun-relay.scobrudot.dev/zen'
+  'https://delay.scobrudot.dev/zen'
 ];
 
 async function buildPeerList(relayUrl) {

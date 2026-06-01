@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const defaultPeers = [
-      'https://shogun-relay.scobrudot.dev/zen'
+      'https://delay.scobrudot.dev/zen'
     ];
 
     const peerSet = new Set(defaultPeers);
