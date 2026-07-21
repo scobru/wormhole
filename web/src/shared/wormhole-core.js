@@ -29,6 +29,8 @@ export const WormholeStatus = Object.freeze({
   DOWNLOADED: 'downloaded',
   ERROR: 'error',
   NOTICE: 'notice',
+  WAITING_PEER: 'waiting-peer',
+  STREAMING_P2P: 'streaming-p2p',
 });
 
 function arrayBufferToBase64(buffer) {
@@ -337,10 +339,13 @@ async function readStreamToBuffer(stream, totalSize, onProgress) {
   let buffer = totalSize ? new Uint8Array(totalSize) : new Uint8Array(0);
   let chunks = []; // Fallback if size is unknown or exceeded
   let useChunks = !totalSize;
-
-  while (true) {
+  let reading = true;
+  while (reading) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) {
+      reading = false;
+      break;
+    }
 
     const chunkLength = value.length;
 
@@ -398,29 +403,8 @@ export class WormholeCore {
     this.onProgress = options.onProgress || (() => {});
   }
 
-  async send({ file, filename, size, type, relayUrl, authToken, lastModified }) {
+  async send({ file, filename, size, type, relayUrl, authToken, lastModified, mode = 'p2p' }) {
     const code = generateCode();
-
-    this.onStatusChange({
-      code,
-      status: WormholeStatus.CHECKING_RELAY,
-      message: 'Verifica connessione al relay IPFS...',
-    });
-
-    // Verifica connessione al relay
-    try {
-      const healthCheck = await fetch(`${relayUrl}/health`);
-      if (!healthCheck.ok) {
-        throw new Error('Relay IPFS non raggiungibile');
-      }
-    } catch (error) {
-      this.onStatusChange({
-        code,
-        status: WormholeStatus.ERROR,
-        message: `Errore di connessione al relay IPFS: ${error.message}`,
-      });
-      throw error;
-    }
 
     let encryptedFile;
     let encryptionMetadata;
@@ -457,7 +441,123 @@ export class WormholeCore {
       throw error;
     }
 
-    // 1. Upload file to IPFS via the relay server
+    const serializedEncryption = JSON.stringify(encryptionMetadata);
+
+    if (mode === 'p2p') {
+      const CHUNK_SIZE = 32768; // 32KB per chunk for WebRTC P2P
+      const arrayBuffer = await encryptedFile.arrayBuffer();
+      const totalChunks = Math.ceil(arrayBuffer.byteLength / CHUNK_SIZE);
+
+      const transferData = {
+        filename,
+        size,
+        type,
+        mode: 'p2p',
+        totalChunks,
+        createdAt: Date.now(),
+        encrypted: true,
+        encryptedSize: encryptedFile.size,
+        encryptionSerialized: serializedEncryption,
+      };
+
+      this.gun.get('shogun/wormhole').get('transfers').get(code).put({
+        createdAt: transferData.createdAt,
+      });
+
+      this.gun.get(code).put(transferData);
+
+      this.onStatusChange({
+        code,
+        status: WormholeStatus.WAITING_PEER,
+        message: 'File cifrato pronto! In attesa che il ricevente inserisca il codice...',
+      });
+
+      let streamingStarted = false;
+
+      const startP2PStreaming = async () => {
+        if (streamingStarted) return;
+        streamingStarted = true;
+
+        this.onStatusChange({
+          code,
+          status: WormholeStatus.STREAMING_P2P,
+          message: `Trasferimento P2P via WebRTC in corso (${totalChunks} chunk)...`,
+        });
+
+        const chunksNode = this.gun.get(`${code}-chunks`);
+
+        for (let i = 0; i < totalChunks; i += 1) {
+          const slice = arrayBuffer.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+          const base64 = arrayBufferToBase64(slice);
+
+          chunksNode.get(String(i)).put({
+            index: i,
+            data: base64,
+          });
+
+          const progress = Math.round(((i + 1) / totalChunks) * 100);
+          this.onProgress({ progress, loaded: i + 1, total: totalChunks });
+
+          if (i % 8 === 0) {
+            await new Promise((r) => setTimeout(r, 4));
+          }
+        }
+
+        this.gun.get(`${code}-complete`).put({ complete: true, timestamp: Date.now() });
+
+        this.onStatusChange({
+          code,
+          status: WormholeStatus.SENT,
+          message: 'Tutti i dati P2P inviati! In attesa della conferma dal ricevente...',
+        });
+      };
+
+      // Listen for receiver ready signal
+      this.gun.get(`${code}-ready`).on((readyData) => {
+        if (readyData && readyData.ready) {
+          void startP2PStreaming();
+        }
+      });
+
+      // Monitor for completion
+      const completionHandler = async (data) => {
+        if (data && data.status === 'completed') {
+          this.gun.get(`${code}-received`).off(completionHandler);
+
+          this.onStatusChange({
+            code,
+            status: WormholeStatus.COMPLETED,
+            message: 'Trasferimento P2P completato dal ricevente!',
+          });
+        }
+      };
+      this.gun.get(`${code}-received`).on(completionHandler);
+
+      return code;
+    }
+
+    // Default: IPFS Relay mode
+    this.onStatusChange({
+      code,
+      status: WormholeStatus.CHECKING_RELAY,
+      message: 'Verifica connessione al relay IPFS...',
+    });
+
+    try {
+      const healthCheck = await fetch(`${relayUrl}/health`);
+      if (!healthCheck.ok) {
+        throw new Error('Relay IPFS non raggiungibile');
+      }
+    } catch (error) {
+      this.onStatusChange({
+        code,
+        status: WormholeStatus.ERROR,
+        message: `Errore di connessione al relay IPFS: ${error.message}`,
+      });
+      throw error;
+    }
+
+    // Upload file to IPFS via the relay server
     try {
       this.onStatusChange({
         code,
@@ -515,42 +615,31 @@ export class WormholeCore {
         message: 'File aggiunto a IPFS. In attesa della conferma del pin...',
       });
 
-      // 2. Save metadata (including the IPFS hash) to Gun
-      const serializedEncryption = JSON.stringify(encryptionMetadata);
-
+      // Save metadata to Gun
       const transferData = {
         filename: filename,
         size: size,
         type: type,
+        mode: 'ipfs',
         ipfsHash: ipfsHash,
-        createdAt: Date.now(), // For the Garbage Collector
+        createdAt: Date.now(),
         encrypted: true,
         encryptedSize: encryptedFile.size,
-        // Optimization: Reduce metadata size and GunDB graph complexity
-        // by sending only the serialized metadata string.
-        // We avoid sending the redundant 'encryption' object (which creates a sub-node)
-        // and the flat fields. The receiver's buildEncryptionMetadata handles this correctly.
         encryptionSerialized: serializedEncryption,
       };
-      // Also add to a central index for the GC to find it
+
       this.gun.get('shogun/wormhole').get('transfers').get(code).put({
         createdAt: transferData.createdAt,
       });
 
-      // Store metadata under the generated code
       this.gun.get(code).put(transferData, (ack) => {
         console.log('✅ Dati salvati su Gun per codice:', code, 'Ack:', ack);
-      });
-
-      // Verifica immediata che i dati siano stati salvati
-      this.gun.get(code).once((savedData) => {
-        console.log('🔍 Verifica dati salvati:', savedData);
       });
 
       this.onStatusChange({
         code,
         status: WormholeStatus.SENT,
-        message: 'File disponibile. Condividi il codice per iniziare il download.',
+        message: 'File disponibile sul relay. Condividi il codice per iniziare il download.',
       });
 
       // Monitor for completion to unpin
@@ -628,7 +717,7 @@ export class WormholeCore {
       message: `Ricerca del trasferimento: ${code}`,
     });
 
-    const onceWithTimeout = (gunNode, timeout = 30000) => {
+    const onceWithTimeout = (gunNode, timeout = 35000) => {
       return new Promise((resolve, reject) => {
         console.log('⏱️ Attendo dati da Gun per:', code);
         let dataReceived = false;
@@ -636,7 +725,7 @@ export class WormholeCore {
         const timer = setTimeout(() => {
           if (!dataReceived) {
             console.log('❌ TIMEOUT: Nessun dato ricevuto per:', code);
-            gunNode.off(); // Clean up the listener
+            gunNode.off();
             reject(
               new Error(
                 `Timeout: Nessun dato ricevuto per il codice "${code}" dopo ${timeout / 1000}s. Controlla il codice e riprova.`
@@ -645,17 +734,16 @@ export class WormholeCore {
           }
         }, timeout);
 
-        // Usa .on() invece di .once() per continuare ad ascoltare
         const listener = (data, key) => {
           console.log('📦 Dati ricevuti da Gun:', data, 'Key:', key);
-          if (data && data.ipfsHash && !dataReceived) {
+          if (data && (data.mode === 'p2p' || data.ipfsHash) && !dataReceived) {
             if (!hasEncryptionMetadata(data)) {
               console.log('⏳ Metadati cifratura incompleti, attendo aggiornamenti...');
               return;
             }
             dataReceived = true;
             clearTimeout(timer);
-            gunNode.off(listener); // Rimuovi il listener
+            gunNode.off(listener);
             resolve(data);
           }
         };
@@ -664,10 +752,9 @@ export class WormholeCore {
       });
     };
 
-    console.log('🔍 Cerco dati su Gun node:', this.gun.get(code));
     onceWithTimeout(this.gun.get(code))
       .then(async (metadata) => {
-        if (!metadata || !metadata.ipfsHash) {
+        if (!metadata || (!metadata.ipfsHash && metadata.mode !== 'p2p')) {
           this.onStatusChange({
             code,
             status: WormholeStatus.ERROR,
@@ -679,17 +766,132 @@ export class WormholeCore {
         this.onStatusChange({
           code,
           status: WormholeStatus.FOUND,
-          message: `Trasferimento trovato: ${metadata.filename}`,
+          message: `Trasferimento trovato: ${metadata.filename} (${metadata.mode === 'p2p' ? 'P2P Direct' : 'IPFS Relay'})`,
           metadata,
         });
 
+        const encryptionMetadata = buildEncryptionMetadata(metadata);
+        if (metadata.encrypted && !encryptionMetadata) {
+          this.onStatusChange({
+            code,
+            status: WormholeStatus.ERROR,
+            message: 'Metadati di cifratura mancanti.',
+          });
+          return;
+        }
+
+        // --- P2P DIRECT STREAM RECEIVE ---
+        if (metadata.mode === 'p2p') {
+          this.onStatusChange({
+            code,
+            status: WormholeStatus.STREAMING_P2P,
+            message: `Connessione WebRTC P2P al mittente per ${metadata.filename}...`,
+          });
+
+          // Signal sender that receiver is ready
+          this.gun.get(`${code}-ready`).put({ ready: true, timestamp: Date.now() });
+
+          const totalChunks = metadata.totalChunks || 1;
+          const receivedChunks = new Map();
+          let isFinalizing = false;
+
+          const finalizeP2PDownload = async () => {
+            if (isFinalizing) return;
+            isFinalizing = true;
+
+            this.onStatusChange({
+              code,
+              status: WormholeStatus.DECRYPTING,
+              message: 'Decifratura dei chunk P2P ricevuti...',
+            });
+
+            try {
+              const sortedChunks = [];
+              for (let i = 0; i < totalChunks; i += 1) {
+                const b64 = receivedChunks.get(i);
+                if (!b64) throw new Error(`Chunk ${i} mancante nel trasferimento P2P.`);
+                const bytes = base64ToUint8Array(b64);
+                sortedChunks.push(bytes);
+              }
+
+              const totalBytes = sortedChunks.reduce((acc, c) => acc + c.length, 0);
+              const combinedBuffer = new Uint8Array(totalBytes);
+              let offset = 0;
+              for (const chunkBytes of sortedChunks) {
+                combinedBuffer.set(chunkBytes, offset);
+                offset += chunkBytes.length;
+              }
+
+              const decryptedBuffer = await decryptArrayBufferWithCode(
+                combinedBuffer.buffer,
+                code,
+                encryptionMetadata
+              );
+
+              const finalBlob = new Blob([decryptedBuffer], {
+                type: metadata.type || 'application/octet-stream',
+              });
+
+              this.onStatusChange({
+                code,
+                status: WormholeStatus.DOWNLOADED,
+                message: 'File P2P scaricato e decifrato con successo!',
+                fileData: {
+                  blob: finalBlob,
+                  buffer: decryptedBuffer,
+                  filename: metadata.filename,
+                  type: metadata.type,
+                },
+              });
+
+              // Notify sender of completion
+              this.gun.get(`${code}-received`).put({
+                status: 'completed',
+                timestamp: Date.now(),
+              });
+            } catch (error) {
+              console.error('Errore decifratura P2P:', error);
+              this.onStatusChange({
+                code,
+                status: WormholeStatus.ERROR,
+                message: error.message,
+              });
+            }
+          };
+
+          const chunkListener = (chunkData) => {
+            if (chunkData && typeof chunkData.index === 'number' && chunkData.data) {
+              if (!receivedChunks.has(chunkData.index)) {
+                receivedChunks.set(chunkData.index, chunkData.data);
+
+                const progress = Math.round((receivedChunks.size / totalChunks) * 100);
+                this.onProgress({ progress, loaded: receivedChunks.size, total: totalChunks });
+
+                if (receivedChunks.size === totalChunks) {
+                  void finalizeP2PDownload();
+                }
+              }
+            }
+          };
+
+          this.gun.get(`${code}-chunks`).map().on(chunkListener);
+
+          this.gun.get(`${code}-complete`).on((data) => {
+            if (data && data.complete && receivedChunks.size === totalChunks) {
+              void finalizeP2PDownload();
+            }
+          });
+
+          return;
+        }
+
+        // --- IPFS GATEWAY RECEIVE ---
         this.onStatusChange({
           code,
           status: WormholeStatus.DOWNLOADING,
           message: `Download di ${metadata.filename} da IPFS in corso...`,
         });
 
-        // 3. Download file from IPFS Gateway
         try {
           const response = await fetch(`${relayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
           if (!response.ok) {
@@ -703,57 +905,29 @@ export class WormholeCore {
           const expectedSize =
             total || (metadata.encrypted ? metadata.encryptedSize : metadata.size);
 
-          let downloadBuffer;
-          try {
-            downloadBuffer = await readStreamToBuffer(
-              response.body,
-              expectedSize,
-              (progressData) => this.onProgress(progressData)
-            );
-          } catch (streamError) {
-            console.error('Errore stream:', streamError);
-            throw streamError;
-          }
+          let downloadBuffer = await readStreamToBuffer(
+            response.body,
+            expectedSize,
+            (progressData) => this.onProgress(progressData)
+          );
 
           let finalBlob;
           let decryptedBuffer;
-          const encryptionMetadata = buildEncryptionMetadata(metadata);
 
           if (metadata.encrypted) {
-            if (!encryptionMetadata) {
-              this.onStatusChange({
-                code,
-                status: WormholeStatus.ERROR,
-                message:
-                  'Metadati di cifratura mancanti. Attendi qualche secondo e riprova oppure richiedi al mittente di ritrasferire il file.',
-              });
-              return;
-            }
-
-            try {
-              // OPTIMIZATION: Read directly into ArrayBuffer to avoid creating intermediate Blob
-              this.onStatusChange({
-                code,
-                status: WormholeStatus.DECRYPTING,
-                message: 'Decifratura del file in corso...',
-              });
-              decryptedBuffer = await decryptArrayBufferWithCode(
-                downloadBuffer,
-                code,
-                encryptionMetadata
-              );
-              finalBlob = new Blob([decryptedBuffer], {
-                type: metadata.type || 'application/octet-stream',
-              });
-            } catch (error) {
-              console.error('Errore di decifratura:', error);
-              this.onStatusChange({
-                code,
-                status: WormholeStatus.ERROR,
-                message: error.message,
-              });
-              return;
-            }
+            this.onStatusChange({
+              code,
+              status: WormholeStatus.DECRYPTING,
+              message: 'Decifratura del file in corso...',
+            });
+            decryptedBuffer = await decryptArrayBufferWithCode(
+              downloadBuffer,
+              code,
+              encryptionMetadata
+            );
+            finalBlob = new Blob([decryptedBuffer], {
+              type: metadata.type || 'application/octet-stream',
+            });
           } else {
             decryptedBuffer = downloadBuffer;
             finalBlob = new Blob([downloadBuffer], {
@@ -767,20 +941,18 @@ export class WormholeCore {
             message: 'File scaricato con successo.',
             fileData: {
               blob: finalBlob,
-              // Optimization: Pass buffer directly to avoid Blob -> ArrayBuffer conversion
               buffer: decryptedBuffer,
               filename: metadata.filename,
               type: metadata.type,
             },
           });
 
-          // Notify sender
           this.gun.get(`${code}-received`).put({
             status: 'completed',
             timestamp: Date.now(),
           });
         } catch (error) {
-          console.error('Errore di download:', error);
+          console.error('Errore di download IPFS:', error);
           this.onStatusChange({
             code,
             status: WormholeStatus.ERROR,

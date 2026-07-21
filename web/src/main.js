@@ -1,5 +1,6 @@
 import { WormholeCore, WormholeStatus, generateCode } from '@wormhole/core';
 import ZEN from 'zen';
+import 'zen/lib/webrtc.js';
 
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
@@ -293,6 +294,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.transferInProgress = true;
     setButtonLoading(elements.sendButton, true, 'Transferring...');
 
+    const selectedMode = document.querySelector('input[name="transfer-mode"]:checked')?.value || 'p2p';
+
     try {
       const transferCode = await wormhole.send({
         file: state.selectedFile,
@@ -302,6 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         relayUrl: RELAY_URL,
         authToken: AUTH_TOKEN,
         lastModified: state.selectedFile.lastModified,
+        mode: selectedMode,
       });
 
       state.currentCode = transferCode;
@@ -385,6 +389,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     switch (status) {
       case WormholeStatus.CHECKING_RELAY:
         showStatus('send', 'info', message);
+        break;
+      case WormholeStatus.WAITING_PEER:
+        showStatus('send', 'info', message);
+        break;
+      case WormholeStatus.STREAMING_P2P:
+        showStatus(state.activeTab, 'info', message);
         break;
       case WormholeStatus.ENCRYPTING:
         showStatus('send', 'info', message);

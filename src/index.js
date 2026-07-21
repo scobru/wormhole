@@ -90,6 +90,8 @@ class WormholeCLI {
       case WormholeStatus.ENCRYPTING:
       case WormholeStatus.UPLOADING:
       case WormholeStatus.PINNING:
+      case WormholeStatus.WAITING_PEER:
+      case WormholeStatus.STREAMING_P2P:
         if (this.spinner.isSpinning) {
           this.spinner.text = message;
         } else {
@@ -184,7 +186,7 @@ class WormholeCLI {
   }
 
   // Invia file
-  async sendFile(filePath) {
+  async sendFile(filePath, mode = 'p2p') {
     if (!fs.existsSync(filePath)) {
       console.log(chalk.red('❌ File non trovato:', filePath));
       return;
@@ -196,8 +198,9 @@ class WormholeCLI {
     console.log(chalk.blue('🚀 Preparazione trasferimento...'));
     console.log(chalk.gray(`📁 File: ${fileName}`));
     console.log(chalk.gray(`📏 Dimensione: ${filesize(stats.size)}`));
+    console.log(chalk.gray(`⚡ Modalità: ${mode === 'p2p' ? 'P2P Diretto (WebRTC)' : 'IPFS Relay'}`));
 
-    this.spinner.start('Uploading file to IPFS via relay...');
+    this.spinner.start(mode === 'p2p' ? 'Preparazione P2P WebRTC...' : 'Uploading file to IPFS via relay...');
 
     try {
       const fileBuffer = fs.readFileSync(filePath);
@@ -211,6 +214,7 @@ class WormholeCLI {
         relayUrl: this.relayUrl,
         authToken: this.authToken,
         lastModified: stats.mtimeMs,
+        mode: mode,
       });
 
       this.spinner.succeed('File uploaded to IPFS!');
@@ -313,7 +317,9 @@ class WormholeCLI {
       setTimeout(() => {
         try {
           socket.close();
-        } catch (e) { }
+        } catch {
+          // ignore socket close error
+        }
       }, 30000);
     } catch (error) {
       // Ignora errori multicast
@@ -442,13 +448,15 @@ async function main() {
   const command = args[0];
 
   switch (command) {
-    case 'send':
+    case 'send': {
       if (!args[1]) {
         console.log(chalk.red('❌ Specifica il file da inviare'));
         return;
       }
-      await cli.sendFile(args[1]);
+      const mode = args.includes('--ipfs') || args.includes('--relay') ? 'ipfs' : 'p2p';
+      await cli.sendFile(args[1], mode);
       break;
+    }
 
     case 'receive':
       if (!args[1]) {
