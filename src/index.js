@@ -20,6 +20,12 @@ import { filesize } from 'filesize';
 import dgram from 'dgram';
 import ZEN from 'zen';
 
+import { webcrypto } from 'crypto';
+if (!globalThis.window) {
+  globalThis.window = { crypto: webcrypto };
+}
+import { GroupService, CommunicationService } from 'linda-core';
+
 import { WormholeCore, WormholeStatus } from './core.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,6 +68,8 @@ class WormholeCLI {
 
     this.relayUrl = relayUrl;
     this.authToken = authToken;
+
+    this.groupService = new GroupService(null);
 
     this.wormhole = new WormholeCore({
       gun,
@@ -326,12 +334,21 @@ class WormholeCLI {
     }
   }
 
+  // Helper per generare un GroupInfo compatibile da una password
+  async getGroupInfo(code) {
+    // Usiamo SHA-256 per ottenere 32 bytes per AES-GCM
+    const hash = await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+    const b64 = Buffer.from(hash).toString('base64');
+    return { secret: b64 };
+  }
+
   // Invia un messaggio cifrato
   async sendMessage(code, message, sender = 'CLI') {
     this.spinner.start('Cifratura e invio messaggio...');
 
     try {
-      const encrypted = await ZEN.encrypt(message, code);
+      const groupInfo = await this.getGroupInfo(code);
+      const encrypted = await this.groupService.encryptGroupMessage(groupInfo, message);
 
       this.wormhole.gun.get('wormhole/messages').get(code).set({
         content: encrypted,
@@ -351,6 +368,7 @@ class WormholeCLI {
     console.log(chalk.gray('(Premi Ctrl+C per uscire)'));
 
     const seen = new Set();
+    const groupInfo = await this.getGroupInfo(code);
 
     this.wormhole.gun
       .get('wormhole/messages')
@@ -360,8 +378,8 @@ class WormholeCLI {
         if (data && data.content && !seen.has(key)) {
           seen.add(key);
           try {
-            const decrypted = await ZEN.decrypt(data.content, code);
-            if (decrypted) {
+            const decrypted = await this.groupService.decryptGroupMessage(groupInfo, data.content);
+            if (decrypted && decrypted !== data.content) {
               const date = new Date(data.timestamp).toLocaleTimeString();
               console.log(
                 `\n${chalk.gray(`[${date}]`)} ${chalk.yellow.bold(data.sender)}: ${chalk.white(decrypted)}`

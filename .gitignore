@@ -34,3 +34,4 @@ gun-relays/
 
 node_modules
 .vercel
+.env*

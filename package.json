@@ -30,6 +30,7 @@
     "clipboardy": "^4.0.0",
     "dotenv": "^17.2.3",
     "filesize": "^10.1.0",
+    "linda-core": "https://github.com/scobru/linda-core.git",
     "ora": "^8.0.1",
     "vercel": "^50.22.1",
     "zen": "https://github.com/akaoio/zen"
