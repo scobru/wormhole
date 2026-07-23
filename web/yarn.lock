@@ -2444,9 +2444,9 @@ yn@3.1.1:
   resolved "https://registry.yarnpkg.com/yn/-/yn-3.1.1.tgz#1e87401a09d767c1d5eab26a6e4c185182d2eb50"
   integrity sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q==
 
-"zen@https://github.com/akaoio/zen":
-  version "1.0.4"
-  resolved "https://github.com/akaoio/zen#93658a208829dc29cdef6957d13f64258033d5c6"
+"zen@https://github.com/scobru/zen":
+  version "1.0.35"
+  resolved "https://github.com/scobru/zen#a7c5a380ccfbffcd7ccef73b3e1cc6a292cb4814"
 
 zod@3.22.4:
   version "3.22.4"
