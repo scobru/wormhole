@@ -632,9 +632,7 @@ export class WormholeCore {
         createdAt: transferData.createdAt,
       });
 
-      this.gun.get(code).put(transferData, (ack) => {
-        console.log('✅ Dati salvati su Gun per codice:', code, 'Ack:', ack);
-      });
+      this.gun.get(code).put(transferData);
 
       this.onStatusChange({
         code,
@@ -709,8 +707,6 @@ export class WormholeCore {
   }
 
   receive(code, relayUrl) {
-    console.log('🔍 Inizio receive per codice:', code);
-
     this.onStatusChange({
       code,
       status: WormholeStatus.CONNECTING,
@@ -719,12 +715,10 @@ export class WormholeCore {
 
     const onceWithTimeout = (gunNode, timeout = 35000) => {
       return new Promise((resolve, reject) => {
-        console.log('⏱️ Attendo dati da Gun per:', code);
         let dataReceived = false;
 
         const timer = setTimeout(() => {
           if (!dataReceived) {
-            console.log('❌ TIMEOUT: Nessun dato ricevuto per:', code);
             gunNode.off();
             reject(
               new Error(
@@ -735,10 +729,8 @@ export class WormholeCore {
         }, timeout);
 
         const listener = (data, key) => {
-          console.log('📦 Dati ricevuti da Gun:', data, 'Key:', key);
           if (data && (data.mode === 'p2p' || data.ipfsHash) && !dataReceived) {
             if (!hasEncryptionMetadata(data)) {
-              console.log('⏳ Metadati cifratura incompleti, attendo aggiornamenti...');
               return;
             }
             dataReceived = true;

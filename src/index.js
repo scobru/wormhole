@@ -20,11 +20,18 @@ import { filesize } from 'filesize';
 import dgram from 'dgram';
 import ZEN from 'zen';
 
+// Suppress internal Gun / ZEN verbose logs
+if (ZEN && typeof ZEN === 'function') {
+  const noop = () => {};
+  noop.once = () => {};
+  ZEN.log = noop;
+}
+
 import { webcrypto } from 'crypto';
 if (!globalThis.window) {
   globalThis.window = { crypto: webcrypto };
 }
-import { GroupService, CommunicationService } from 'linda-core';
+import { GroupService } from 'linda-core';
 
 import { WormholeCore, WormholeStatus } from './core.js';
 
@@ -32,14 +39,51 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import dotenv from 'dotenv';
-dotenv.config({ path: path.join(__dirname, '../web/.env') });
+dotenv.config({ path: path.join(__dirname, '../web/.env'), quiet: true });
 
 const RELAY_URL = process.env.VITE_RELAY_URL;
 const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN;
 
-const DEFAULT_PEERS = [
-  'https://delay.scobrudot.dev/zen'
-];
+const DEFAULT_PEERS = ['https://delay.scobrudot.dev/zen'];
+
+// Intercept noisy console output from dependencies
+function setupCleanTerminalLogs() {
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origError = console.error;
+
+  const noiseKeywords = [
+    'localStorage',
+    'AXE relay',
+    'DHT k-buckets',
+    'Multicast udp',
+    'injected env',
+    'Dati ricevuti da Gun',
+    'Attendo dati da Gun',
+    'Inizio receive per codice',
+    'Dati salvati su Gun',
+    'Metadati cifratura',
+    'TIMEOUT: Nessun dato',
+  ];
+
+  function isNoise(args) {
+    if (!args || args.length === 0) return false;
+    const str = args.map((a) => (typeof a === 'string' ? a : (a && a.message) || String(a))).join(' ');
+    return noiseKeywords.some((kw) => str.includes(kw));
+  }
+
+  console.log = (...args) => {
+    if (!isNoise(args)) origLog(...args);
+  };
+  console.warn = (...args) => {
+    if (!isNoise(args)) origWarn(...args);
+  };
+  console.error = (...args) => {
+    if (!isNoise(args)) origError(...args);
+  };
+}
+
+setupCleanTerminalLogs();
 
 async function buildPeerList(relayUrl) {
   const peerSet = new Set(DEFAULT_PEERS);
@@ -56,9 +100,6 @@ async function buildPeerList(relayUrl) {
 
   return Array.from(peerSet);
 }
-
-// Zen handles headers and authentication differently, skipping Gun-specific opt hook
-
 
 class WormholeCLI {
   constructor({ gun, relayUrl, authToken }) {
@@ -100,58 +141,7 @@ class WormholeCLI {
       case WormholeStatus.PINNING:
       case WormholeStatus.WAITING_PEER:
       case WormholeStatus.STREAMING_P2P:
-        if (this.spinner.isSpinning) {
-          this.spinner.text = message;
-        } else {
-          this.spinner.start(message);
-        }
-        break;
-      case WormholeStatus.UNPINNING:
-        if (this.spinner.isSpinning) {
-          this.spinner.stop();
-        }
-        console.log(chalk.gray(message));
-        break;
-      case WormholeStatus.SENT:
-        this.spinner.succeed(message);
-        console.log(chalk.green.bold('\n🎯 Condividi questo codice:'));
-        console.log(chalk.black.bgWhite(` ${code} `));
-        console.log(chalk.gray('\nComando per il ricevente:'));
-        console.log(chalk.cyan(`wormhole receive ${code}`));
-        console.log(
-          chalk.yellow(
-            '\nQuesto codice è anche la chiave di decrittazione end-to-end. Mantienilo segreto.'
-          )
-        );
-        console.log(chalk.yellow('\n⏳ In attesa del ricevente...'));
-        break;
-      case WormholeStatus.COMPLETED:
-        this.spinner.succeed(message);
-        setTimeout(() => process.exit(0), 1000);
-        break;
-      case WormholeStatus.ERROR:
-        if (this.spinner.isSpinning) {
-          this.spinner.fail(message);
-        } else {
-          this.spinner.stop();
-          console.log(chalk.red(message));
-        }
-        process.exit(1);
-        break;
       case WormholeStatus.CONNECTING:
-        if (this.spinner.isSpinning) {
-          this.spinner.text = message;
-        } else {
-          this.spinner.start(message);
-        }
-        break;
-      case WormholeStatus.FOUND: {
-        const sizeInfo = metadata?.size ? ` (${filesize(metadata.size)})` : '';
-        this.spinner.succeed(
-          `${message || 'Trasferimento trovato'}${sizeInfo}`
-        );
-        break;
-      }
       case WormholeStatus.DOWNLOADING:
       case WormholeStatus.DECRYPTING:
         if (this.spinner.isSpinning) {
@@ -160,37 +150,58 @@ class WormholeCLI {
           this.spinner.start(message);
         }
         break;
+
+      case WormholeStatus.SENT:
+        // Rendered explicitly in sendFile to ensure instantaneous output
+        break;
+
+      case WormholeStatus.COMPLETED:
+        if (this.spinner.isSpinning) {
+          this.spinner.succeed('Trasferimento P2P completato con successo dal ricevente!');
+        }
+        console.log(chalk.gray('👋 Arrivederci!\n'));
+        setTimeout(() => process.exit(0), 500);
+        break;
+
+      case WormholeStatus.ERROR:
+        if (this.spinner.isSpinning) {
+          this.spinner.fail(`Errore: ${message}`);
+        } else {
+          console.log(chalk.red(`❌ Errore: ${message}`));
+        }
+        process.exit(1);
+        break;
+
+      case WormholeStatus.FOUND: {
+        const sizeInfo = metadata?.size ? ` (${filesize(metadata.size)})` : '';
+        const modeInfo = metadata?.mode === 'p2p' ? 'P2P Direct' : 'IPFS Relay';
+        this.spinner.succeed(`Trasferimento trovato: ${metadata.filename || 'File'}${sizeInfo} [${modeInfo}]`);
+        break;
+      }
+
       case WormholeStatus.DOWNLOADED:
         this.saveFile(fileData, this.spinner);
         break;
+
+      case WormholeStatus.UNPINNING:
       case WormholeStatus.UNPINNED:
-        if (this.spinner.isSpinning) {
-          this.spinner.succeed(message);
-        } else {
-          console.log(chalk.gray(message));
-        }
-        break;
       case WormholeStatus.NOTICE:
-        if (this.spinner.isSpinning) {
-          this.spinner.stop();
-        }
-        console.log(chalk.yellow(message));
         break;
+
       default:
-        if (message) {
-          if (this.spinner.isSpinning) {
-            this.spinner.text = message;
-          } else {
-            console.log(message);
-          }
+        if (message && this.spinner.isSpinning) {
+          this.spinner.text = message;
         }
     }
   }
 
   handleProgress({ progress, loaded, total }) {
-    const loadedSize = filesize(loaded || 0);
-    const totalSize = filesize(total || 0);
-    this.spinner.text = `Downloading... ${progress}% (${loadedSize} / ${totalSize})`;
+    if (this.spinner.isSpinning) {
+      const loadedStr = loaded ? filesize(loaded) : '';
+      const totalStr = total ? filesize(total) : '';
+      const sizeStr = loadedStr && totalStr ? ` (${loadedStr} / ${totalStr})` : '';
+      this.spinner.text = `Trasferimento in corso... ${progress}%${sizeStr}`;
+    }
   }
 
   // Invia file
@@ -203,12 +214,7 @@ class WormholeCLI {
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
 
-    console.log(chalk.blue('🚀 Preparazione trasferimento...'));
-    console.log(chalk.gray(`📁 File: ${fileName}`));
-    console.log(chalk.gray(`📏 Dimensione: ${filesize(stats.size)}`));
-    console.log(chalk.gray(`⚡ Modalità: ${mode === 'p2p' ? 'P2P Diretto (WebRTC)' : 'IPFS Relay'}`));
-
-    this.spinner.start(mode === 'p2p' ? 'Preparazione P2P WebRTC...' : 'Uploading file to IPFS via relay...');
+    this.spinner.start('🚀 Preparazione e cifratura file...');
 
     try {
       const fileBuffer = fs.readFileSync(filePath);
@@ -225,14 +231,46 @@ class WormholeCLI {
         mode: mode,
       });
 
-      this.spinner.succeed('File uploaded to IPFS!');
+      this.spinner.stop();
 
+      let copied = false;
       try {
         await clipboardy.write(code);
-        console.log(chalk.green('📋 Codice copiato negli appunti!'));
+        copied = true;
       } catch (e) {
-        // Ignore clipboard errors
+        // Ignore clipboard write error
       }
+
+      console.log('');
+      console.log(chalk.bold.cyan('🌌 WORMHOLE P2P TRANSFER'));
+      console.log(chalk.gray(`📁 File: ${fileName} (${filesize(stats.size)})`));
+      console.log(chalk.gray(`⚡ Modalità: ${mode === 'p2p' ? 'P2P Diretto (WebRTC)' : 'IPFS Relay'}`));
+
+      console.log('\n' + chalk.green.bold('🎯 Condividi questo codice:'));
+      console.log(chalk.black.bgWhite.bold(` ${code} `));
+      if (copied) {
+        console.log(chalk.green('📋 Codice copiato negli appunti!'));
+      }
+
+      console.log('\n' + chalk.gray('Comando per il ricevente:'));
+      console.log(chalk.cyan(`wormhole receive ${code}`));
+
+      console.log(
+        chalk.yellow(
+          '\n🔒 Questo codice è anche la chiave di decrittazione end-to-end. Mantienilo segreto.'
+        )
+      );
+
+      if (mode === 'p2p') {
+        console.log(
+          chalk.bold.red(
+            '\n⚠️  NON chiudere questo terminale fino al completamento del trasferimento!'
+          )
+        );
+      }
+
+      console.log('');
+      this.spinner.start(chalk.yellow('⏳ In attesa che il ricevente si connetta e scarichi il file...'));
 
       // Annuncia il trasferimento sulla rete locale via multicast
       this.announceTransfer(code, fileName, stats.size);
@@ -266,11 +304,6 @@ class WormholeCLI {
           this.multicastPort,
           this.multicastAddress,
           (err) => {
-            if (err) {
-              // console.error(chalk.yellow('⚠️ Impossibile annunciare sulla rete locale'));
-            } else {
-              // console.log(chalk.gray('📡 Annunciato sulla rete locale'));
-            }
             socket.close();
           }
         );
@@ -282,6 +315,8 @@ class WormholeCLI {
 
   // Ricevi file
   async receiveFile(code) {
+    this.spinner.start(`Ricerca del trasferimento per: ${code}...`);
+
     // 1. Inizia ascolto Multicast locale per scoperta immediata
     this.listenForMulticastTransfer(code);
 
@@ -303,10 +338,6 @@ class WormholeCLI {
             !this.localDiscoveryFound
           ) {
             this.localDiscoveryFound = true;
-            console.log(
-              chalk.blue(`📡 Scoperto trasferimento locale da ${rinfo.address}!`)
-            );
-            // I dati Zen dovrebbero arrivare comunque, ma questo conferma che il peer è online
           }
         } catch (e) {
           // Ignore parse errors
@@ -317,7 +348,7 @@ class WormholeCLI {
         try {
           socket.addMembership(this.multicastAddress);
         } catch (e) {
-          // console.error("Errore addMembership:", e);
+          // Ignore membership errors
         }
       });
 
@@ -336,7 +367,6 @@ class WormholeCLI {
 
   // Helper per generare un GroupInfo compatibile da una password
   async getGroupInfo(code) {
-    // Usiamo SHA-256 per ottenere 32 bytes per AES-GCM
     const hash = await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
     const b64 = Buffer.from(hash).toString('base64');
     return { secret: b64 };
@@ -395,17 +425,14 @@ class WormholeCLI {
   async saveFile(fileData, spinner) {
     const { blob, filename, buffer: dataBuffer } = fileData;
     try {
-      // Use buffer directly if available (CLI optimization), otherwise fallback to Blob
       const buffer = dataBuffer
         ? Buffer.from(dataBuffer)
         : Buffer.from(await blob.arrayBuffer());
 
-      // Sanitize filename to prevent path traversal
       const safeFilename = path.basename(filename);
       let outputPath = safeFilename;
       let counter = 1;
 
-      // Evita sovrascrittura
       while (fs.existsSync(outputPath)) {
         const ext = path.extname(safeFilename);
         const name = path.basename(safeFilename, ext);
@@ -417,10 +444,12 @@ class WormholeCLI {
 
       spinner.succeed(`✅ File salvato: ${outputPath}`);
       console.log(chalk.green(`📁 Dimensione: ${filesize(buffer.length)}`));
+      console.log(chalk.gray('👋 Arrivederci!\n'));
       setTimeout(() => process.exit(0), 500);
     } catch (error) {
       spinner.fail('❌ Errore nel salvataggio');
       console.error(chalk.red(error.message));
+      process.exit(1);
     }
   }
 
@@ -440,7 +469,6 @@ class WormholeCLI {
     return mimeTypes[ext] || 'application/octet-stream';
   }
 
-  // Lista trasferimenti attivi (placeholder)
   async listTransfers() {
     console.log(chalk.blue('📋 Trasferimenti attivi:'));
     console.log(chalk.gray('(Funzionalità in sviluppo)'));
@@ -495,17 +523,13 @@ async function main() {
       }
 
       if (args.length >= 4) {
-        // wormhole msg <code> <nick> <message>
         await cli.sendMessage(args[1], args.slice(3).join(' '), args[2]);
         setTimeout(() => process.exit(0), 1000);
       } else if (args.length === 3) {
-        // wormhole msg <code> <message>
         await cli.sendMessage(args[1], args[2]);
         setTimeout(() => process.exit(0), 1000);
       } else {
-        // Altrimenti mettiti in ascolto
         await cli.listenForMessages(args[1]);
-        // Tieni il processo in vita per ascoltare i messaggi
         setInterval(() => { }, 1000);
       }
       break;
