@@ -1,5 +1,6 @@
 import { WormholeCore, WormholeStatus } from '@wormhole/core';
 import ZEN from 'zen';
+import '../styles/wormhole.css';
 
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
