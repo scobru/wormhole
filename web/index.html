@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wormhole — Decentralized P2P File Transfer</title>
+  <title>Wormhole — Decentralized P2P &amp; IPFS File Transfer</title>
+  <meta name="description" content="High-performance decentralized P2P and IPFS file transfer with zero-knowledge end-to-end encryption using WebRTC DataChannels and ZEN protocol signaling." />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.1/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,177 +13,636 @@
 </head>
 
 <body class="antialiased flex flex-col min-h-screen">
-  <div class="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8">
-    <div class="wormhole-card w-full max-w-xl p-6 sm:p-8 transition-all duration-300">
-      <div class="flex flex-col items-center">
-        <!-- Logo Portal -->
-        <div class="logo-portal mb-4">
-          <img src="/logo.svg" alt="Wormhole Logo" class="h-14 w-14 drop-shadow-[0_0_12px_rgba(138,63,252,0.8)]" />
+  <!-- Ambient Cosmic Lighting Orbs -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="wormhole-nav py-3 px-4 sm:px-8">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <!-- Brand / Logo -->
+      <a href="#transfer" data-view-target="transfer" class="flex items-center gap-3 group select-none cursor-pointer">
+        <div class="relative flex items-center justify-center p-2 rounded-xl bg-purple-950/60 border border-purple-500/30 group-hover:border-purple-400/60 shadow-[0_0_15px_rgba(138,63,252,0.3)] transition-all">
+          <img src="/logo.svg" alt="Wormhole Logo" class="h-6 w-6 drop-shadow-[0_0_8px_rgba(138,63,252,0.8)]" />
         </div>
-
-        <h1 class="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-purple-200 mb-1">
-          Wormhole
-        </h1>
-        <p class="text-xs sm:text-sm text-slate-400 mb-6 text-center flex items-center gap-1.5 font-medium">
-          <span>Decentralized P2P &amp; IPFS Transfer</span>
-          <span class="inline-block w-1 h-1 rounded-full bg-slate-600"></span>
-          <span class="text-purple-400 font-mono text-[11px] tracking-wide">E2EE</span>
-        </p>
-
-        <!-- Mode Switcher Tabs (Send / Receive) -->
-        <div class="wormhole-tabs mb-6" role="tablist" aria-label="Transfer Mode" data-tab-group="wormhole">
-          <button type="button" role="tab" class="wormhole-tab tab-active" data-tab-button="send" aria-selected="true" aria-controls="send-tab" id="tab-send">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            <span>Send</span>
-          </button>
-          <button type="button" role="tab" class="wormhole-tab" data-tab-button="receive" aria-selected="false" aria-controls="receive-tab" id="tab-receive">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>Receive</span>
-          </button>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-purple-200">
+              WORMHOLE
+            </span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              v1.1.0
+            </span>
+          </div>
+          <span class="text-[10px] text-slate-400 -mt-0.5 hidden sm:inline">Decentralized P2P &amp; IPFS</span>
         </div>
+      </a>
 
-        <!-- ================= SEND TAB ================= -->
-        <div id="send-tab" role="tabpanel" aria-labelledby="tab-send" class="w-full space-y-4" data-tab-panel="send">
-          <!-- File Drop Zone -->
-          <div id="send-prompt" role="button" tabindex="0" aria-label="Click or drop a file to upload"
-            class="file-drop-zone flex flex-col items-center justify-center gap-3 select-none">
-            <div class="p-3.5 rounded-full bg-purple-900/30 text-purple-400 border border-purple-500/20 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-            </div>
-            <div class="text-center">
-              <p class="font-medium text-sm text-slate-200">Drag &amp; drop your file here, or <span class="text-purple-400 underline underline-offset-2">browse</span></p>
-              <p class="text-[11px] text-slate-400 mt-1">End-to-end encrypted &bull; Max 100MB</p>
-            </div>
+      <!-- View Navigation Pills -->
+      <nav class="flex items-center gap-1 sm:gap-2 bg-slate-900/80 p-1 rounded-full border border-white/10 shadow-inner">
+        <button type="button" data-view-nav="transfer" class="nav-pill-btn active" title="File Transfer Dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          <span>Transfer</span>
+        </button>
+        <button type="button" data-view-nav="about" class="nav-pill-btn" title="About &amp; Architecture">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>About</span>
+        </button>
+        <button type="button" data-view-nav="cli" class="nav-pill-btn" title="Command Line Interface">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>CLI Docs</span>
+        </button>
+      </nav>
+
+      <!-- Right Meta / Actions -->
+      <div class="hidden md:flex items-center gap-3">
+        <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-400 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          AES-256 E2EE
+        </span>
+        <a href="https://github.com/scobru/wormhole" target="_blank" rel="noreferrer"
+          class="btn btn-sm btn-ghost border border-white/10 hover:border-purple-500/40 text-slate-300 hover:text-white rounded-xl gap-2 font-medium text-xs">
+          <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT CONTAINER ================= -->
+  <main class="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 md:p-8 relative z-10 w-full max-w-6xl mx-auto">
+
+    <!-- ================= VIEW 1: TRANSFER (MAIN DASHBOARD) ================= -->
+    <div id="view-transfer" class="view-panel w-full flex items-center justify-center">
+      <div class="wormhole-card w-full max-w-xl p-6 sm:p-8 transition-all duration-300">
+        <div class="flex flex-col items-center">
+          <!-- Logo Portal with Accretion Glow -->
+          <div class="logo-portal mb-4">
+            <img src="/logo.svg" alt="Wormhole Logo" class="h-14 w-14 drop-shadow-[0_0_14px_rgba(138,63,252,0.85)]" />
           </div>
 
-          <input type="file" id="fileInput" class="hidden" />
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-purple-200 mb-1.5 text-center">
+            Wormhole
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-400 mb-6 text-center flex items-center justify-center flex-wrap gap-2 font-medium">
+            <span>Decentralized P2P &amp; IPFS Transfer</span>
+            <span class="inline-block w-1 h-1 rounded-full bg-slate-600"></span>
+            <span class="text-purple-400 font-mono text-[11px] tracking-wide bg-purple-950/40 px-2 py-0.5 rounded-full border border-purple-500/20">E2EE</span>
+            <span class="inline-block w-1 h-1 rounded-full bg-slate-600"></span>
+            <span class="text-cyan-400 font-mono text-[11px] tracking-wide bg-cyan-950/40 px-2 py-0.5 rounded-full border border-cyan-500/20">ZEN Protocol</span>
+          </p>
 
-          <!-- TuneCamp Library Integration Button -->
-          <button type="button" id="btn-fetch-lab" class="btn btn-sm btn-outline border-purple-500/40 text-purple-300 hover:bg-purple-950/40 hover:border-purple-400 w-full hidden gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
-            Pick from TuneCamp Library
-          </button>
-
-          <!-- File Info & Options Section -->
-          <div id="file-info-section" class="w-full hidden space-y-4">
-            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3 shadow-inner">
-              <div id="file-details" class="flex items-center gap-3 overflow-hidden flex-1">
-                <!-- Dynamically populated in main.js -->
-              </div>
-              <button type="button" id="btn-remove-file" class="btn btn-ghost btn-circle btn-sm text-slate-400 hover:text-red-400 hover:bg-red-950/30" title="Remove / Change file">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <!-- Transfer Mode Selector -->
-            <div class="space-y-2">
-              <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-1">Transfer Routing</div>
-              <div class="flex flex-col sm:flex-row gap-2.5">
-                <label class="mode-card cursor-pointer">
-                  <input type="radio" name="transfer-mode" value="p2p" id="mode-p2p" checked class="radio radio-accent radio-xs text-purple-500" />
-                  <div class="flex flex-col">
-                    <span class="font-medium text-xs text-slate-200">⚡ Direct P2P (WebRTC)</span>
-                    <span class="text-[10px] text-slate-400">Direct streaming between browsers</span>
-                  </div>
-                </label>
-                <label class="mode-card cursor-pointer">
-                  <input type="radio" name="transfer-mode" value="ipfs" id="mode-ipfs" class="radio radio-accent radio-xs text-purple-500" />
-                  <div class="flex flex-col">
-                    <span class="font-medium text-xs text-slate-200">☁️ IPFS Relay (Async)</span>
-                    <span class="text-[10px] text-slate-400">Decentralized staging relay</span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <button type="button" id="send-btn" class="btn btn-wormhole w-full py-3 h-auto text-sm" disabled>
-              Start Transfer
-            </button>
-          </div>
-
-          <!-- Code Display Section -->
-          <div id="code-section" class="w-full hidden space-y-3">
-            <div class="code-display-box flex flex-col items-center justify-center text-center">
-              <span class="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mb-1">Mnemonic Sync Code</span>
-              <code id="transfer-code" class="code-font select-all py-1"></code>
-            </div>
-
-            <p class="text-xs text-slate-400 text-center px-4 leading-relaxed">
-              Share this secret key with the recipient. The transfer begins automatically when connected.
-            </p>
-
-            <button type="button" class="btn btn-wormhole w-full py-2.5 h-auto text-sm gap-2" data-action="copy-code">
+          <!-- Mode Switcher Tabs (Send / Receive) -->
+          <div class="wormhole-tabs mb-6" role="tablist" aria-label="Transfer Mode" data-tab-group="wormhole">
+            <button type="button" role="tab" class="wormhole-tab tab-active" data-tab-button="send" aria-selected="true" aria-controls="send-tab" id="tab-send">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              <span>Copy Code</span>
+              <span>Send File</span>
+            </button>
+            <button type="button" role="tab" class="wormhole-tab" data-tab-button="receive" aria-selected="false" aria-controls="receive-tab" id="tab-receive">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Receive File</span>
             </button>
           </div>
 
-          <div id="send-status" class="mt-2" aria-live="polite"></div>
-          <div id="send-progress" class="w-full hidden mt-3">
-            <div class="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Transferring...</span>
-              <span id="send-progress-pct" class="font-mono text-purple-400">0%</span>
-            </div>
-            <progress class="progress progress-accent w-full bg-slate-800" value="0" max="100"></progress>
-          </div>
-        </div>
-
-        <!-- ================= RECEIVE TAB ================= -->
-        <div id="receive-tab" role="tabpanel" aria-labelledby="tab-receive" class="w-full hidden space-y-4" data-tab-panel="receive">
-          <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 space-y-3">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400" for="receive-code">
-              Enter Sync Code
-            </label>
-            <div class="relative flex items-center">
-              <input type="text" id="receive-code" placeholder="e.g.: 7-guitar-horse" maxlength="50" autocomplete="off" spellcheck="false"
-                class="input input-bordered w-full bg-slate-950/80 border-slate-700 text-slate-100 font-mono tracking-wide focus:border-purple-500 focus:ring-1 focus:ring-purple-500 pr-10 text-sm" />
-              <button type="button" id="btn-paste-code" class="absolute right-2 btn btn-ghost btn-xs text-slate-400 hover:text-purple-300" title="Paste from clipboard">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          <!-- ================= SEND TAB ================= -->
+          <div id="send-tab" role="tabpanel" aria-labelledby="tab-send" class="w-full space-y-4" data-tab-panel="send">
+            <!-- File Drop Zone -->
+            <div id="send-prompt" role="button" tabindex="0" aria-label="Click or drop a file to upload"
+              class="file-drop-zone flex flex-col items-center justify-center gap-3 select-none">
+              <div class="p-4 rounded-full bg-gradient-to-br from-purple-900/40 to-slate-900 text-purple-400 border border-purple-500/30 shadow-[0_0_20px_rgba(138,63,252,0.25)] transition-transform group-hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
+              </div>
+              <div class="text-center">
+                <p class="font-semibold text-sm text-slate-100">
+                  Drag &amp; drop your file here, or <span class="text-purple-400 underline underline-offset-4 decoration-purple-500/60 font-medium">browse</span>
+                </p>
+                <div class="flex items-center justify-center gap-2 mt-2 text-[11px] text-slate-400">
+                  <span class="inline-flex items-center gap-1 text-slate-400">
+                    <svg class="h-3 w-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"></path></svg>
+                    End-to-end encrypted
+                  </span>
+                  <span>&bull;</span>
+                  <span>Max 100MB</span>
+                </div>
+              </div>
+            </div>
+
+            <input type="file" id="fileInput" class="hidden" />
+
+            <!-- TuneCamp Library Integration Button -->
+            <button type="button" id="btn-fetch-lab" class="btn btn-sm btn-outline border-purple-500/40 text-purple-300 hover:bg-purple-950/40 hover:border-purple-400 w-full hidden gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+              Pick from TuneCamp Library
+            </button>
+
+            <!-- File Info & Options Section -->
+            <div id="file-info-section" class="w-full hidden space-y-4">
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3 shadow-inner">
+                <div id="file-details" class="flex items-center gap-3 overflow-hidden flex-1">
+                  <!-- Dynamically populated in main.js -->
+                </div>
+                <button type="button" id="btn-remove-file" class="btn btn-ghost btn-circle btn-sm text-slate-400 hover:text-red-400 hover:bg-red-950/30" title="Remove / Change file">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Transfer Mode Selector -->
+              <div class="space-y-2">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-1">Routing Mode</div>
+                <div class="flex flex-col sm:flex-row gap-2.5">
+                  <label class="mode-card cursor-pointer">
+                    <input type="radio" name="transfer-mode" value="p2p" id="mode-p2p" checked class="radio radio-accent radio-xs text-purple-500" />
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-semibold text-xs text-slate-100">⚡ Direct P2P</span>
+                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">WebRTC</span>
+                      </div>
+                      <span class="text-[10px] text-slate-400 mt-0.5">Direct streaming between peers</span>
+                    </div>
+                  </label>
+                  <label class="mode-card cursor-pointer">
+                    <input type="radio" name="transfer-mode" value="ipfs" id="mode-ipfs" class="radio radio-accent radio-xs text-purple-500" />
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-semibold text-xs text-slate-100">☁️ IPFS Relay</span>
+                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-mono">Async</span>
+                      </div>
+                      <span class="text-[10px] text-slate-400 mt-0.5">Decentralized staging relay</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <button type="button" id="send-btn" class="btn btn-wormhole w-full py-3 h-auto text-sm" disabled>
+                Generate Code &amp; Start Transfer
               </button>
             </div>
-            <p class="text-[11px] text-slate-400">
-              The code serves as the decryption key. Transmission happens directly and securely.
-            </p>
+
+            <!-- Code Display Section -->
+            <div id="code-section" class="w-full hidden space-y-3">
+              <div class="code-display-box flex flex-col items-center justify-center text-center">
+                <span class="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mb-1.5">Mnemonic Sync Code</span>
+                <code id="transfer-code" class="code-font select-all py-1"></code>
+              </div>
+
+              <p class="text-xs text-slate-400 text-center px-4 leading-relaxed">
+                Share this secret key with the recipient. The transfer begins automatically as soon as the receiver enters the code.
+              </p>
+
+              <button type="button" class="btn btn-wormhole w-full py-2.5 h-auto text-sm gap-2" data-action="copy-code">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>Copy Sync Code</span>
+              </button>
+            </div>
+
+            <div id="send-status" class="mt-2" aria-live="polite"></div>
+            <div id="send-progress" class="w-full hidden mt-3">
+              <div class="flex justify-between text-xs text-slate-300 mb-1.5">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-purple-400 animate-ping"></span>
+                  <span>Transferring stream...</span>
+                </span>
+                <span id="send-progress-pct" class="font-mono text-purple-400 font-semibold">0%</span>
+              </div>
+              <progress class="progress progress-accent w-full bg-slate-800" value="0" max="100"></progress>
+            </div>
           </div>
 
-          <button type="button" class="btn btn-wormhole w-full py-3 h-auto text-sm gap-2" id="receive-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span>Connect &amp; Download</span>
-          </button>
-
-          <div id="receive-status" class="mt-2" aria-live="polite"></div>
-          <div id="receive-progress" class="w-full hidden mt-3">
-            <div class="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Downloading &amp; Decrypting...</span>
-              <span id="receive-progress-pct" class="font-mono text-purple-400">0%</span>
+          <!-- ================= RECEIVE TAB ================= -->
+          <div id="receive-tab" role="tabpanel" aria-labelledby="tab-receive" class="w-full hidden space-y-4" data-tab-panel="receive">
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 space-y-3 shadow-inner">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400" for="receive-code">
+                Enter Mnemonic Sync Code
+              </label>
+              <div class="relative flex items-center">
+                <input type="text" id="receive-code" placeholder="e.g.: 82-gentle-bird" maxlength="50" autocomplete="off" spellcheck="false"
+                  class="input input-bordered w-full bg-slate-950/80 border-slate-700 text-slate-100 font-mono tracking-wide focus:border-purple-500 focus:ring-1 focus:ring-purple-500 pr-10 text-sm" />
+                <button type="button" id="btn-paste-code" class="absolute right-2 btn btn-ghost btn-xs text-slate-400 hover:text-purple-300" title="Paste from clipboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-400">
+                The code serves as both the signaling rendezvous key and the 256-bit decryption key. No intermediary ever sees the plaintext.
+              </p>
             </div>
-            <progress class="progress progress-accent w-full bg-slate-800" value="0" max="100"></progress>
+
+            <button type="button" class="btn btn-wormhole w-full py-3 h-auto text-sm gap-2" id="receive-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Connect &amp; Download File</span>
+            </button>
+
+            <div id="receive-status" class="mt-2" aria-live="polite"></div>
+            <div id="receive-progress" class="w-full hidden mt-3">
+              <div class="flex justify-between text-xs text-slate-300 mb-1.5">
+                <span class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                  <span>Receiving &amp; Decrypting stream...</span>
+                </span>
+                <span id="receive-progress-pct" class="font-mono text-cyan-400 font-semibold">0%</span>
+              </div>
+              <progress class="progress progress-accent w-full bg-slate-800" value="0" max="100"></progress>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- ================= VIEW 2: ABOUT & ARCHITECTURE ================= -->
+    <div id="view-about" class="view-panel w-full hidden space-y-8 max-w-4xl py-4">
+      <!-- Hero Banner -->
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider">
+          <svg class="h-3.5 w-3.5 text-purple-400" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14H8a4 4 0 01-.8-7.92A4.002 4.002 0 0116 10c0 1.636-.983 3.04-2.4 3.655-.38.163-.6.545-.6.945z"></path></svg>
+          Zero-Knowledge Architecture
+        </div>
+        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-purple-200">
+          Decentralized P2P &amp; IPFS File Transfer
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+          WORMHOLE enables wire-speed, end-to-end encrypted file sharing between peers using direct 
+          <strong>WebRTC DataChannels</strong>, serverless <strong>ZEN</strong> signaling, and decentralized <strong>IPFS</strong> staging fallback.
+        </p>
+      </div>
+
+      <!-- 4 Architectural Pillars Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <!-- Pillar 1: WebRTC -->
+        <div class="arch-card">
+          <div class="arch-card-icon bg-purple-950/60 border border-purple-500/40 text-purple-400">
+            ⚡
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+            <span>Direct P2P Stream (WebRTC)</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">Default</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Inspired by <em>FilePizza</em>, files are streamed directly between peers using binary <code class="text-purple-300 bg-slate-900 px-1 py-0.5 rounded font-mono text-xs">RTCDataChannel</code> in 64KB chunks.
+          </p>
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-400">
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Zero Base64 &amp; Zero DB Flooding</strong>: Wire-speed transfer over UDP/SCTP.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Flow Control</strong>: Native backpressure management (<code class="text-slate-300 font-mono">bufferedAmount</code>).</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pillar 2: Serverless Signaling -->
+        <div class="arch-card">
+          <div class="arch-card-icon bg-cyan-950/60 border border-cyan-500/40 text-cyan-400">
+            📡
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+            <span>Serverless Signaling via ZEN</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">GunDB</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            The <strong>ZEN</strong> distributed graph database acts as a decentralized rendezvous bus, eliminating reliance on proprietary WebSocket or Socket.io servers.
+          </p>
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-400">
+            <li class="flex items-center gap-2">
+              <span class="text-cyan-400 font-bold">✓</span>
+              <span><strong>Lightweight Handshake (~2-3 KB)</strong>: SDP Offer/Answer &amp; ICE candidates.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-cyan-400 font-bold">✓</span>
+              <span><strong>Ephemeral Coordination</strong>: Rendezvous metadata cleaned up upon handshake.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pillar 3: IPFS Relay -->
+        <div class="arch-card">
+          <div class="arch-card-icon bg-indigo-950/60 border border-indigo-500/40 text-indigo-400">
+            ☁️
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+            <span>IPFS Relay (<a href="https://github.com/scobru/delay" target="_blank" rel="noreferrer" class="text-indigo-300 underline underline-offset-2 hover:text-indigo-200">delay</a>)</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">--ipfs</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            When peers are behind symmetric enterprise NATs or asynchronous delivery is required, encrypted files are staged on IPFS via the companion relay <strong>scobru/delay</strong>.
+          </p>
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-400">
+            <li class="flex items-center gap-2">
+              <span class="text-indigo-400 font-bold">✓</span>
+              <span><strong>Automatic Cache Purge</strong>: Receiver confirmation triggers automated unpinning.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-indigo-400 font-bold">✓</span>
+              <span><strong>Custom Relay Support</strong>: Run your own self-hosted delay instance anytime.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pillar 4: E2EE -->
+        <div class="arch-card">
+          <div class="arch-card-icon bg-emerald-950/60 border border-emerald-500/40 text-emerald-400">
+            🔒
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+            <span>End-to-End Encryption (E2EE)</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">AES-GCM</span>
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            All files are encrypted client-side using military-grade <strong>AES-GCM (256-bit)</strong> with PBKDF2 key derivation.
+          </p>
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-400">
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Zero-Knowledge Mnemonic</strong>: The code (e.g. <code class="text-slate-200 font-mono">82-gentle-bird</code>) is both the address and the key.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Confidentiality</strong>: Relays and signaling nodes never see plaintext or filenames.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Lifecycle Workflow Diagram -->
+      <div class="wormhole-card p-6 sm:p-8 space-y-4">
+        <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <span>🔄 How Wormhole Works Under the Hood</span>
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+          <div class="flex flex-col p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <span class="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-xs font-mono">01</span>
+            <h4 class="text-sm font-semibold text-slate-200">Local Encryption</h4>
+            <p class="text-xs text-slate-400">Sender generates mnemonic code and encrypts file via AES-256-GCM in the browser or terminal.</p>
+          </div>
+          <div class="flex flex-col p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-xs font-mono">02</span>
+            <h4 class="text-sm font-semibold text-slate-200">ZEN Discovery</h4>
+            <p class="text-xs text-slate-400">Receiver inputs code. Peers discover each other over ZEN graph and exchange WebRTC SDP &amp; ICE.</p>
+          </div>
+          <div class="flex flex-col p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <span class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xs font-mono">03</span>
+            <h4 class="text-sm font-semibold text-slate-200">Direct Stream</h4>
+            <p class="text-xs text-slate-400">Encrypted binary chunks travel at wire-speed through WebRTC DataChannel (or IPFS fallback).</p>
+          </div>
+          <div class="flex flex-col p-4 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+            <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs font-mono">04</span>
+            <h4 class="text-sm font-semibold text-slate-200">Local Decryption</h4>
+            <p class="text-xs text-slate-400">Receiver decrypts stream in memory and saves file. Signaling state &amp; relay caches auto-purge.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Back to Transfer -->
+      <div class="text-center pt-2">
+        <button type="button" data-view-target="transfer" class="btn btn-wormhole px-6 py-2.5 h-auto text-sm">
+          <span>Try File Transfer Now</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= VIEW 3: CLI DOCS (`wh`) ================= -->
+    <div id="view-cli" class="view-panel w-full hidden space-y-8 max-w-4xl py-4">
+      <!-- Hero Banner -->
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold uppercase tracking-wider">
+          <svg class="h-3.5 w-3.5 text-cyan-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path></svg>
+          Command Line Interface
+        </div>
+        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-purple-200">
+          Wormhole CLI (<code class="font-mono text-purple-300">wh</code>)
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+          The CLI binary is named <strong><code class="text-purple-300 font-mono">wh</code></strong> to prevent collisions with <code class="text-slate-400 font-mono">magic-wormhole</code>. Fast, lightweight, and sharing the exact universal core with this browser dashboard.
+        </p>
+      </div>
+
+      <!-- Quick Installation Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Global Install -->
+        <div class="wormhole-card p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Global Installation</span>
+            <span class="text-[10px] text-slate-400 font-mono">npm</span>
+          </div>
+          <div class="code-snippet-box">
+            <span class="text-slate-200 select-all">npm install -g wormhole</span>
+            <button type="button" class="copy-cmd-btn" data-copy-text="npm install -g wormhole">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <span>Copy</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400">Gives you direct access to the global <code class="text-slate-200 font-mono">wh</code> command from any terminal shell.</p>
+        </div>
+
+        <!-- Instant npx Run -->
+        <div class="wormhole-card p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Run Instantly (Zero Install)</span>
+            <span class="text-[10px] text-slate-400 font-mono">npx</span>
+          </div>
+          <div class="code-snippet-box">
+            <span class="text-slate-200 select-all">npx wh send &lt;file-path&gt;</span>
+            <button type="button" class="copy-cmd-btn" data-copy-text="npx wh send <file-path>">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <span>Copy</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400">Zero disk setup required. Runs on-demand anywhere Node.js is installed.</p>
+        </div>
+      </div>
+
+      <!-- Terminal Mockup Window -->
+      <div class="terminal-window">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <span class="terminal-dot bg-red-500/80"></span>
+            <span class="terminal-dot bg-amber-500/80"></span>
+            <span class="terminal-dot bg-emerald-500/80"></span>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono">bash — wh send my-video.mp4</div>
+          <div class="w-10"></div>
+        </div>
+        <div class="terminal-body space-y-2">
+          <div class="flex items-center justify-between text-slate-400 text-xs border-b border-white/5 pb-2 mb-2">
+            <span>Terminal Live Simulation</span>
+            <button type="button" class="copy-cmd-btn" data-copy-text="wh send my-video.mp4">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <span>Copy Demo</span>
+            </button>
+          </div>
+          <div>
+            <span class="text-purple-400 font-bold">$</span> <span class="text-white font-semibold">wh send my-video.mp4</span>
+          </div>
+          <div class="text-slate-400">
+            [+] File: <span class="text-slate-200">my-video.mp4</span> (68.4 MB)<br/>
+            [+] Deriving AES-256-GCM encryption keys...<br/>
+            [+] Connected to ZEN rendezvous graph: <span class="text-cyan-400">https://delay.scobrudot.dev/zen</span>
+          </div>
+          <div class="my-2 p-3 bg-purple-950/40 border border-purple-500/30 rounded-lg text-purple-200 font-bold">
+            🌌 Mnemonic Sync Code: <span class="text-yellow-300 font-mono text-base">82-gentle-bird</span>
+          </div>
+          <div class="text-slate-400">
+            [*] Waiting for recipient to connect...<br/>
+            [✓] Peer connected via WebRTC DataChannel (Direct P2P)<br/>
+            [▶] Streaming chunks: <span class="text-emerald-400 font-bold">[====================] 100% (52.3 MB/s)</span><br/>
+            [✓] Transfer complete! Decrypted and verified by recipient.
+          </div>
+        </div>
+      </div>
+
+      <!-- Command Reference Table -->
+      <div class="wormhole-card p-6 space-y-4">
+        <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <span>🛠️ CLI Command Reference</span>
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="table w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b border-white/10 text-slate-400">
+                <th class="py-2.5">Command</th>
+                <th class="py-2.5">Description</th>
+                <th class="py-2.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 font-mono text-xs">
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-purple-300 font-bold">wh send &lt;file&gt; [options]</td>
+                <td class="font-sans text-slate-300">Encrypts and streams file via direct WebRTC P2P (or IPFS relay).</td>
+                <td class="text-right font-sans">
+                  <button type="button" class="copy-cmd-btn" data-copy-text="wh send ">Copy</button>
+                </td>
+              </tr>
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-cyan-300 font-bold">wh receive &lt;code&gt; [options]</td>
+                <td class="font-sans text-slate-300">Connects to sender, downloads stream, and decrypts using sync code.</td>
+                <td class="text-right font-sans">
+                  <button type="button" class="copy-cmd-btn" data-copy-text="wh receive ">Copy</button>
+                </td>
+              </tr>
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-emerald-300 font-bold">wh list</td>
+                <td class="font-sans text-slate-300">Lists currently active transfers (experimental).</td>
+                <td class="text-right font-sans">
+                  <button type="button" class="copy-cmd-btn" data-copy-text="wh list">Copy</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CLI Options Table -->
+      <div class="wormhole-card p-6 space-y-4">
+        <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <span>⚙️ CLI Options &amp; Flags</span>
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="table w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr class="border-b border-white/10 text-slate-400">
+                <th class="py-2.5">Flag</th>
+                <th class="py-2.5">Shorthand</th>
+                <th class="py-2.5">Description</th>
+                <th class="py-2.5">Default</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 font-mono text-xs">
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-purple-300">--p2p</td>
+                <td class="text-slate-400">-</td>
+                <td class="font-sans text-slate-300">Use direct WebRTC DataChannel streaming.</td>
+                <td class="text-emerald-400 font-bold">true</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-cyan-300">--ipfs, --relay</td>
+                <td class="text-slate-400">-</td>
+                <td class="font-sans text-slate-300">Send via IPFS relay instead of direct P2P.</td>
+                <td class="text-slate-400">false</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-indigo-300">--url &lt;url&gt;</td>
+                <td class="text-slate-300">-u</td>
+                <td class="font-sans text-slate-300">Custom IPFS relay URL.</td>
+                <td class="text-slate-400 truncate max-w-[140px]">https://delay.scobrudot.dev</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02]">
+                <td class="py-3 text-yellow-300">--token &lt;token&gt;</td>
+                <td class="text-slate-300">-t</td>
+                <td class="font-sans text-slate-300">Bearer auth token for IPFS relay upload.</td>
+                <td class="text-slate-400">shogun2025</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Real World Examples Grid -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <span>💡 Practical Usage Examples</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="wormhole-card p-5 space-y-2">
+            <div class="text-xs font-bold text-purple-300">1. High-Speed WebRTC P2P Transfer</div>
+            <p class="text-xs text-slate-400">Recommended for fastest direct transfer:</p>
+            <div class="code-snippet-box">
+              <span class="text-slate-200 select-all text-xs">wh send video.mp4</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="wh send video.mp4">Copy</button>
+            </div>
+            <div class="code-snippet-box">
+              <span class="text-slate-200 select-all text-xs">wh receive 82-gentle-bird</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird">Copy</button>
+            </div>
+          </div>
+
+          <div class="wormhole-card p-5 space-y-2">
+            <div class="text-xs font-bold text-cyan-300">2. Staged Transfer via IPFS Relay</div>
+            <p class="text-xs text-slate-400">Ideal when sender and receiver are not online at same time:</p>
+            <div class="code-snippet-box">
+              <span class="text-slate-200 select-all text-xs">wh send backup.zip --ipfs</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="wh send backup.zip --ipfs">Copy</button>
+            </div>
+            <div class="code-snippet-box">
+              <span class="text-slate-200 select-all text-xs">wh receive 14-calm-wave</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 14-calm-wave">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <!-- TuneCamp Library Modal -->
   <dialog id="lab-modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-200">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-200 shadow-2xl">
       <h3 class="font-bold text-base mb-3 text-purple-400 flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -197,21 +657,35 @@
   </dialog>
 
   <!-- Clean, Semantic Footer -->
-  <footer class="w-full py-4 px-4 text-center text-xs text-slate-400 mt-auto border-t border-slate-900/50">
-    <div class="flex flex-wrap justify-center items-center gap-3">
-      <a href="https://github.com/scobru/wormhole" target="_blank" rel="noreferrer" class="hover:text-purple-400 transition-colors">
-        GitHub
-      </a>
-      <span class="opacity-30">&bull;</span>
-      <span>
-        Built with
-        <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-3.5 w-3.5 text-purple-400 mx-0.5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-        </svg>
-        by <a href="https://github.com/scobru" target="_blank" rel="noreferrer" class="text-slate-300 hover:text-purple-400 transition-colors font-medium">scobru</a>
-      </span>
-      <span class="opacity-30">&bull;</span>
-      <span class="text-slate-400 font-mono text-[11px]">v1.1.0</span>
+  <footer class="w-full py-6 px-4 text-center text-xs text-slate-400 mt-auto border-t border-slate-900/60 bg-slate-950/40 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-300">Wormhole</span>
+        <span class="text-slate-600">&bull;</span>
+        <span>Decentralized P2P &amp; IPFS Transfer</span>
+      </div>
+
+      <div class="flex flex-wrap justify-center items-center gap-4">
+        <button type="button" data-view-target="transfer" class="hover:text-purple-400 transition-colors">Transfer</button>
+        <span class="opacity-30">&bull;</span>
+        <button type="button" data-view-target="about" class="hover:text-purple-400 transition-colors">About &amp; Architecture</button>
+        <span class="opacity-30">&bull;</span>
+        <button type="button" data-view-target="cli" class="hover:text-purple-400 transition-colors">CLI Docs</button>
+        <span class="opacity-30">&bull;</span>
+        <a href="https://github.com/scobru/wormhole" target="_blank" rel="noreferrer" class="hover:text-purple-400 transition-colors flex items-center gap-1">
+          GitHub
+        </a>
+      </div>
+
+      <div>
+        <span>
+          Built with
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-3.5 w-3.5 text-purple-400 mx-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          by <a href="https://github.com/scobru" target="_blank" rel="noreferrer" class="text-slate-300 hover:text-purple-400 transition-colors font-medium">scobru</a>
+        </span>
+      </div>
     </div>
   </footer>
 

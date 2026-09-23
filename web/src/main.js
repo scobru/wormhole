@@ -661,9 +661,92 @@ function formatBytes(size) {
   return `${value.toFixed(1)} ${units[unitIndex]}`;
 }
 
+function switchView(viewName) {
+  const validViews = ['transfer', 'about', 'cli'];
+  const targetView = validViews.includes(viewName) ? viewName : 'transfer';
+
+  const views = {
+    transfer: document.getElementById('view-transfer'),
+    about: document.getElementById('view-about'),
+    cli: document.getElementById('view-cli'),
+  };
+
+  Object.entries(views).forEach(([name, el]) => {
+    if (el) {
+      el.classList.toggle('hidden', name !== targetView);
+    }
+  });
+
+  document.querySelectorAll('[data-view-nav]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.viewNav === targetView);
+  });
+
+  if (window.location.hash.replace('#', '') !== targetView) {
+    history.pushState(null, '', `#${targetView}`);
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function setupViewNavigation() {
+  document.querySelectorAll('[data-view-nav]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      switchView(btn.dataset.viewNav);
+    });
+  });
+
+  document.querySelectorAll('[data-view-target]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchView(el.dataset.viewTarget);
+    });
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['transfer', 'about', 'cli'].includes(hash)) {
+      switchView(hash);
+    }
+  });
+
+  const initialHash = window.location.hash.replace('#', '');
+  if (initialHash && ['transfer', 'about', 'cli'].includes(initialHash)) {
+    switchView(initialHash);
+  }
+}
+
+function setupCopyButtons() {
+  document.querySelectorAll('[data-copy-text]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const textToCopy = btn.dataset.copyText;
+      if (!textToCopy) return;
+
+      const originalHTML = btn.innerHTML;
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        btn.classList.add('copied');
+        btn.innerHTML = `
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Copiato!</span>
+        `;
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = originalHTML;
+        }, 2000);
+      } catch (err) {
+        console.warn('Clipboard write error', err);
+      }
+    });
+  });
+}
+
 function setup() {
   elements = getDomElements();
   wireEventListeners();
+  setupViewNavigation();
+  setupCopyButtons();
   resetUI();
   getWormhole().catch((e) => console.warn('Wormhole pre-init notice:', e));
 }
