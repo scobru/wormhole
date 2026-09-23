@@ -1,6 +1,5 @@
 import { WormholeCore, WormholeStatus } from '@wormhole/core';
 import ZEN from 'zen';
-import 'zen/lib/webrtc.js';
 
 const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;

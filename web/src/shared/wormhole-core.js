@@ -11,6 +11,19 @@ const ENCRYPTION_CONFIG = {
   keyLength: 256,
 };
 
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+  ],
+};
+
+function serializeCandidate(candidate) {
+  if (!candidate) return null;
+  return JSON.stringify(candidate.toJSON ? candidate.toJSON() : candidate);
+}
+
 const textEncoder = new TextEncoder();
 
 export const WormholeStatus = Object.freeze({
@@ -444,9 +457,63 @@ export class WormholeCore {
     const serializedEncryption = JSON.stringify(encryptionMetadata);
 
     if (mode === 'p2p') {
-      const CHUNK_SIZE = 32768; // 32KB per chunk for WebRTC P2P
+      const PeerConnectionClass = globalThis.RTCPeerConnection;
+      if (!PeerConnectionClass) {
+        throw new Error('WebRTC (RTCPeerConnection) non è supportato in questo ambiente.');
+      }
+
       const arrayBuffer = await encryptedFile.arrayBuffer();
+      const CHUNK_SIZE = 64 * 1024; // 64KB per chunk
       const totalChunks = Math.ceil(arrayBuffer.byteLength / CHUNK_SIZE);
+
+      const pc = new PeerConnectionClass(RTC_CONFIG);
+      const dataChannel = pc.createDataChannel('wormhole-p2p', { ordered: true });
+      dataChannel.binaryType = 'arraybuffer';
+
+      const pendingCandidates = [];
+      const addCandidateSafely = (cand) => {
+        if (pc.remoteDescription && pc.remoteDescription.type) {
+          pc.addIceCandidate(new (globalThis.RTCIceCandidate || RTCIceCandidate)(cand)).catch(() => {});
+        } else {
+          pendingCandidates.push(cand);
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          const serialized = serializeCandidate(event.candidate);
+          if (serialized) {
+            this.gun.get(`${code}-ice-sender`).set(serialized);
+          }
+        }
+      };
+
+      this.gun.get(`${code}-ice-receiver`).map().on((candidateStr) => {
+        if (candidateStr) {
+          try {
+            const cand = JSON.parse(candidateStr);
+            addCandidateSafely(cand);
+          } catch (e) {}
+        }
+      });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Wait a moment for initial ICE gathering so host/srflx candidates are in the offer SDP
+      await new Promise((r) => {
+        if (pc.iceGatheringState === 'complete') {
+          r();
+        } else {
+          const timeout = setTimeout(r, 400);
+          pc.onicegatheringstatechange = () => {
+            if (pc.iceGatheringState === 'complete') {
+              clearTimeout(timeout);
+              r();
+            }
+          };
+        }
+      });
 
       const transferData = {
         filename,
@@ -454,19 +521,17 @@ export class WormholeCore {
         type,
         mode: 'p2p',
         totalChunks,
+        chunkSize: CHUNK_SIZE,
         createdAt: Date.now(),
         encrypted: true,
         encryptedSize: encryptedFile.size,
         encryptionSerialized: serializedEncryption,
+        offer: JSON.stringify(pc.localDescription),
       };
-
-      // Wait for the ZEN WebSocket connection to establish before putting data.
-      await new Promise((r) => setTimeout(r, 1000));
 
       this.gun.get('shogun/wormhole').get('transfers').get(code).put({
         createdAt: transferData.createdAt,
       });
-
       this.gun.get(code).put(transferData);
 
       this.onStatusChange({
@@ -475,56 +540,126 @@ export class WormholeCore {
         message: 'File cifrato pronto! In attesa che il ricevente inserisca il codice...',
       });
 
-      let streamingStarted = false;
-
-      const uploadChunks = async () => {
-        const chunksNode = this.gun.get(`${code}-chunks`);
-
-        for (let i = 0; i < totalChunks; i += 1) {
-          const slice = arrayBuffer.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-          const base64 = arrayBufferToBase64(slice);
-
-          chunksNode.get(String(i)).put({
-            index: i,
-            data: base64,
-          });
-
-          const progress = Math.round(((i + 1) / totalChunks) * 100);
-          this.onProgress({ progress, loaded: i + 1, total: totalChunks });
-
-          if (i % 8 === 0) {
-            await new Promise((r) => setTimeout(r, 4));
+      let answerApplied = false;
+      this.gun.get(`${code}-answer`).on(async (answerData) => {
+        if (answerData && answerData.answer && !answerApplied) {
+          answerApplied = true;
+          try {
+            const answer = JSON.parse(answerData.answer);
+            await pc.setRemoteDescription(new (globalThis.RTCSessionDescription || RTCSessionDescription)(answer));
+            for (const cand of pendingCandidates) {
+              pc.addIceCandidate(new (globalThis.RTCIceCandidate || RTCIceCandidate)(cand)).catch(() => {});
+            }
+            pendingCandidates.length = 0;
+          } catch (e) {
+            console.error('Errore applicando SDP Answer:', e);
           }
-        }
-
-        this.gun.get(`${code}-complete`).put({ complete: true, timestamp: Date.now() });
-      };
-
-      // Immediately upload chunks to Gun so they are available on the relay network
-      void uploadChunks();
-
-      // Listen for receiver ready signal and re-stream if requested
-      this.gun.get(`${code}-ready`).on((readyData) => {
-        if (readyData && readyData.ready) {
-          this.onStatusChange({
-            code,
-            status: WormholeStatus.STREAMING_P2P,
-            message: `Ricevente connesso! Trasferimento P2P in corso (${totalChunks} chunk)...`,
-          });
-          void uploadChunks();
         }
       });
 
-      // Monitor for completion
+      let transferStarted = false;
+      const startStreaming = async () => {
+        if (transferStarted) return;
+        transferStarted = true;
+
+        this.onStatusChange({
+          code,
+          status: WormholeStatus.STREAMING_P2P,
+          message: `Connessione WebRTC P2P attiva! Invio di ${filename} (${totalChunks} chunk da 64KB)...`,
+        });
+
+        // 1. Send Header
+        dataChannel.send(
+          JSON.stringify({
+            type: 'wormhole-header',
+            filename,
+            size,
+            encryptedSize: encryptedFile.size,
+            totalChunks,
+            chunkSize: CHUNK_SIZE,
+          })
+        );
+
+        // 2. Stream Binary Chunks with Flow Control (Backpressure)
+        dataChannel.bufferedAmountLowThreshold = 1024 * 1024; // 1MB
+        for (let i = 0; i < totalChunks; i += 1) {
+          if (dataChannel.readyState !== 'open') {
+            throw new Error('Canale WebRTC chiuso durante il trasferimento.');
+          }
+
+          const start = i * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, arrayBuffer.byteLength);
+          const slice = arrayBuffer.slice(start, end);
+
+          dataChannel.send(slice);
+
+          const loaded = end;
+          this.onProgress({
+            progress: Math.round((loaded / arrayBuffer.byteLength) * 100),
+            loaded,
+            total: arrayBuffer.byteLength,
+          });
+
+          // Wait if buffer exceeds 2MB
+          if (dataChannel.bufferedAmount > 2 * 1024 * 1024) {
+            await new Promise((resolve) => {
+              const onLow = () => {
+                dataChannel.onbufferedamountlow = null;
+                resolve();
+              };
+              dataChannel.onbufferedamountlow = onLow;
+              setTimeout(resolve, 250);
+            });
+          }
+        }
+
+        // 3. Send EOF
+        dataChannel.send(JSON.stringify({ type: 'wormhole-eof' }));
+      };
+
+      if (dataChannel.readyState === 'open') {
+        void startStreaming();
+      } else {
+        dataChannel.onopen = () => {
+          void startStreaming();
+        };
+      }
+
+      dataChannel.onmessage = (msgEvent) => {
+        if (typeof msgEvent.data === 'string') {
+          try {
+            const msg = JSON.parse(msgEvent.data);
+            if (msg.type === 'wormhole-ack') {
+              this.onStatusChange({
+                code,
+                status: WormholeStatus.COMPLETED,
+                message: 'Trasferimento WebRTC P2P completato con successo!',
+              });
+              setTimeout(() => {
+                try {
+                  dataChannel.close();
+                  pc.close();
+                } catch (e) {}
+              }, 1000);
+            }
+          } catch (e) {}
+        }
+      };
+
       const completionHandler = async (data) => {
         if (data && data.status === 'completed') {
           this.gun.get(`${code}-received`).off(completionHandler);
-
           this.onStatusChange({
             code,
             status: WormholeStatus.COMPLETED,
-            message: 'Trasferimento P2P completato dal ricevente!',
+            message: 'Trasferimento WebRTC P2P completato dal ricevente!',
           });
+          setTimeout(() => {
+            try {
+              dataChannel.close();
+              pc.close();
+            } catch (e) {}
+          }, 1000);
         }
       };
       this.gun.get(`${code}-received`).on(completionHandler);
@@ -780,48 +915,72 @@ export class WormholeCore {
           return;
         }
 
-        // --- P2P DIRECT STREAM RECEIVE ---
+        // --- P2P DIRECT WEBRTC STREAM RECEIVE ---
         if (metadata.mode === 'p2p') {
+          const PeerConnectionClass = globalThis.RTCPeerConnection;
+          if (!PeerConnectionClass) {
+            throw new Error('WebRTC (RTCPeerConnection) non è supportato in questo ambiente.');
+          }
+
+          if (!metadata.offer) {
+            throw new Error('Offerta WebRTC mancante nei metadati del trasferimento.');
+          }
+
           this.onStatusChange({
             code,
-            status: WormholeStatus.STREAMING_P2P,
-            message: `Connessione WebRTC P2P al mittente per ${metadata.filename}...`,
+            status: WormholeStatus.CONNECTING,
+            message: `Negoziazione WebRTC P2P con il mittente per ${metadata.filename}...`,
           });
 
-          // Signal sender that receiver is ready
-          this.gun.get(`${code}-ready`).put({ ready: true, timestamp: Date.now() });
+          const pc = new PeerConnectionClass(RTC_CONFIG);
+          const pendingCandidates = [];
+          const addCandidateSafely = (cand) => {
+            if (pc.remoteDescription && pc.remoteDescription.type) {
+              pc.addIceCandidate(new (globalThis.RTCIceCandidate || RTCIceCandidate)(cand)).catch(() => {});
+            } else {
+              pendingCandidates.push(cand);
+            }
+          };
 
-          const totalChunks = metadata.totalChunks || 1;
-          const receivedChunks = new Map();
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              const serialized = serializeCandidate(event.candidate);
+              if (serialized) {
+                this.gun.get(`${code}-ice-receiver`).set(serialized);
+              }
+            }
+          };
+
+          this.gun.get(`${code}-ice-sender`).map().on((candidateStr) => {
+            if (candidateStr) {
+              try {
+                const cand = JSON.parse(candidateStr);
+                addCandidateSafely(cand);
+              } catch (e) {}
+            }
+          });
+
+          let fileHeader = null;
+          const receivedChunks = [];
+          let totalReceivedBytes = 0;
           let isFinalizing = false;
-          let chunkPollInterval = null;
 
-          const finalizeP2PDownload = async () => {
+          const finalizeDownload = async (activeDc) => {
             if (isFinalizing) return;
             isFinalizing = true;
-            if (chunkPollInterval) clearInterval(chunkPollInterval);
 
             this.onStatusChange({
               code,
               status: WormholeStatus.DECRYPTING,
-              message: 'Decifratura dei chunk P2P ricevuti...',
+              message: 'Tutti i chunk WebRTC ricevuti. Decifratura del file in corso...',
             });
 
             try {
-              const sortedChunks = [];
-              for (let i = 0; i < totalChunks; i += 1) {
-                const b64 = receivedChunks.get(i);
-                if (!b64) throw new Error(`Chunk ${i} mancante nel trasferimento P2P.`);
-                const bytes = base64ToUint8Array(b64);
-                sortedChunks.push(bytes);
-              }
-
-              const totalBytes = sortedChunks.reduce((acc, c) => acc + c.length, 0);
-              const combinedBuffer = new Uint8Array(totalBytes);
+              const combinedBuffer = new Uint8Array(totalReceivedBytes);
               let offset = 0;
-              for (const chunkBytes of sortedChunks) {
-                combinedBuffer.set(chunkBytes, offset);
-                offset += chunkBytes.length;
+              for (const chunk of receivedChunks) {
+                combinedBuffer.set(new Uint8Array(chunk), offset);
+                offset += chunk.byteLength;
               }
 
               const decryptedBuffer = await decryptArrayBufferWithCode(
@@ -837,7 +996,7 @@ export class WormholeCore {
               this.onStatusChange({
                 code,
                 status: WormholeStatus.DOWNLOADED,
-                message: 'File P2P scaricato e decifrato con successo!',
+                message: 'File scaricato e decifrato con successo via WebRTC!',
                 fileData: {
                   blob: finalBlob,
                   buffer: decryptedBuffer,
@@ -846,11 +1005,23 @@ export class WormholeCore {
                 },
               });
 
-              // Notify sender of completion
+              if (activeDc && activeDc.readyState === 'open') {
+                try {
+                  activeDc.send(JSON.stringify({ type: 'wormhole-ack' }));
+                } catch (e) {}
+              }
+
               this.gun.get(`${code}-received`).put({
                 status: 'completed',
                 timestamp: Date.now(),
               });
+
+              setTimeout(() => {
+                try {
+                  activeDc?.close();
+                  pc.close();
+                } catch (e) {}
+              }, 1000);
             } catch (error) {
               console.error('Errore decifratura P2P:', error);
               this.onStatusChange({
@@ -861,49 +1032,82 @@ export class WormholeCore {
             }
           };
 
-          const chunkListener = (chunkData) => {
-            if (chunkData && typeof chunkData.index === 'number' && chunkData.data) {
-              if (!receivedChunks.has(chunkData.index)) {
-                receivedChunks.set(chunkData.index, chunkData.data);
+          pc.ondatachannel = (event) => {
+            const dc = event.channel;
+            dc.binaryType = 'arraybuffer';
 
-                const progress = Math.round((receivedChunks.size / totalChunks) * 100);
-                this.onProgress({ progress, loaded: receivedChunks.size, total: totalChunks });
+            dc.onopen = () => {
+              this.onStatusChange({
+                code,
+                status: WormholeStatus.STREAMING_P2P,
+                message: `Connessione WebRTC P2P attiva! Ricezione diretta di ${metadata.filename}...`,
+              });
+            };
 
-                if (receivedChunks.size === totalChunks) {
-                  void finalizeP2PDownload();
+            dc.onmessage = async (msgEvent) => {
+              if (typeof msgEvent.data === 'string') {
+                try {
+                  const msg = JSON.parse(msgEvent.data);
+                  if (msg.type === 'wormhole-header') {
+                    fileHeader = msg;
+                  } else if (msg.type === 'wormhole-eof') {
+                    await finalizeDownload(dc);
+                  }
+                } catch (e) {
+                  console.error('Error handling control message:', e);
                 }
+              } else if (msgEvent.data instanceof ArrayBuffer) {
+                receivedChunks.push(msgEvent.data);
+                totalReceivedBytes += msgEvent.data.byteLength;
+
+                const expectedTotal =
+                  metadata.encryptedSize ||
+                  fileHeader?.encryptedSize ||
+                  metadata.size ||
+                  totalReceivedBytes;
+
+                const progress = Math.min(100, Math.round((totalReceivedBytes / expectedTotal) * 100));
+                this.onProgress({
+                  progress,
+                  loaded: totalReceivedBytes,
+                  total: expectedTotal,
+                });
               }
-            }
+            };
+
+            dc.onerror = (err) => {
+              console.error('WebRTC DataChannel error:', err);
+            };
           };
 
-          // 1. Listen via map().on()
-          this.gun.get(`${code}-chunks`).map().on(chunkListener);
+          const offer = JSON.parse(metadata.offer);
+          await pc.setRemoteDescription(new (globalThis.RTCSessionDescription || RTCSessionDescription)(offer));
 
-          // 2. Explicitly query each chunk index to guarantee no missed sub-nodes
-          for (let i = 0; i < totalChunks; i += 1) {
-            this.gun.get(`${code}-chunks`).get(String(i)).on(chunkListener);
+          for (const cand of pendingCandidates) {
+            pc.addIceCandidate(new (globalThis.RTCIceCandidate || RTCIceCandidate)(cand)).catch(() => {});
           }
+          pendingCandidates.length = 0;
 
-          // 3. Fallback poll in case some chunks are in flight or delayed
-          chunkPollInterval = setInterval(() => {
-            if (isFinalizing || receivedChunks.size === totalChunks) {
-              if (chunkPollInterval) clearInterval(chunkPollInterval);
-              return;
-            }
-            // Re-signal ready
-            this.gun.get(`${code}-ready`).put({ ready: true, timestamp: Date.now() });
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
 
-            for (let i = 0; i < totalChunks; i += 1) {
-              if (!receivedChunks.has(i)) {
-                this.gun.get(`${code}-chunks`).get(String(i)).once(chunkListener);
-              }
+          await new Promise((r) => {
+            if (pc.iceGatheringState === 'complete') {
+              r();
+            } else {
+              const timeout = setTimeout(r, 300);
+              pc.onicegatheringstatechange = () => {
+                if (pc.iceGatheringState === 'complete') {
+                  clearTimeout(timeout);
+                  r();
+                }
+              };
             }
-          }, 1500);
+          });
 
-          this.gun.get(`${code}-complete`).on((data) => {
-            if (data && data.complete && receivedChunks.size === totalChunks) {
-              void finalizeP2PDownload();
-            }
+          this.gun.get(`${code}-answer`).put({
+            answer: JSON.stringify(pc.localDescription),
+            timestamp: Date.now(),
           });
 
           return;

@@ -31,6 +31,11 @@ import { webcrypto } from 'crypto';
 if (!globalThis.window) {
   globalThis.window = { crypto: webcrypto };
 }
+
+import polyfill from 'node-datachannel/polyfill';
+if (!globalThis.RTCPeerConnection) {
+  Object.assign(globalThis, polyfill);
+}
 import { WormholeCore, WormholeStatus } from './core.js';
 
 const __filename = fileURLToPath(import.meta.url);

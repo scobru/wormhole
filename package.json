@@ -5,7 +5,7 @@
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "wormhole": "src/index.js"
+    "wh": "src/index.js"
   },
   "scripts": {
     "cli": "node src/index.js",
@@ -30,6 +30,7 @@
     "clipboardy": "^4.0.0",
     "dotenv": "^17.2.3",
     "filesize": "^10.1.0",
+    "node-datachannel": "^0.33.4",
     "ora": "^8.0.1",
     "vercel": "^50.22.1",
     "zen": "https://github.com/scobru/zen"
