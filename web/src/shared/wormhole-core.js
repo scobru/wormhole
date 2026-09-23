@@ -753,6 +753,7 @@ export class WormholeCore {
         type: type,
         mode: 'ipfs',
         ipfsHash: ipfsHash,
+        relayUrl: relayUrl,
         createdAt: Date.now(),
         encrypted: true,
         encryptedSize: encryptedFile.size,
@@ -847,10 +848,11 @@ export class WormholeCore {
     const onceWithTimeout = (gunNode, timeout = 35000) => {
       return new Promise((resolve, reject) => {
         let dataReceived = false;
+        let pollInterval = null;
 
         const timer = setTimeout(() => {
           if (!dataReceived) {
-            clearInterval(pollInterval);
+            if (pollInterval) clearInterval(pollInterval);
             gunNode.off();
             reject(
               new Error(
@@ -867,7 +869,7 @@ export class WormholeCore {
             }
             dataReceived = true;
             clearTimeout(timer);
-            clearInterval(pollInterval);
+            if (pollInterval) clearInterval(pollInterval);
             gunNode.off(listener);
             resolve(data);
           }
@@ -876,9 +878,9 @@ export class WormholeCore {
         gunNode.on(listener);
 
         // Periodically trigger query in case WebSocket connected after listener registration
-        const pollInterval = setInterval(() => {
+        pollInterval = setInterval(() => {
           if (dataReceived) {
-            clearInterval(pollInterval);
+            if (pollInterval) clearInterval(pollInterval);
             return;
           }
           gunNode.once(listener);
@@ -1121,7 +1123,8 @@ export class WormholeCore {
         });
 
         try {
-          const response = await fetch(`${relayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
+          const effectiveRelayUrl = metadata.relayUrl || relayUrl || 'https://delay.scobrudot.dev';
+          const response = await fetch(`${effectiveRelayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
           if (!response.ok) {
             throw new Error(
               `Impossibile scaricare dal gateway IPFS (status: ${response.status})`

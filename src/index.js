@@ -5,9 +5,9 @@
  * Trasferimento file P2P da terminale
  *
  * Usage:
- *   wormhole send <file>           # Invia un file
- *   wormhole receive <code>        # Ricevi un file
- *   wormhole list                  # Lista trasferimenti attivi
+ *   wh send <file>           # Invia un file
+ *   wh receive <code>        # Ricevi un file
+ *   wh list                  # Lista trasferimenti attivi
  */
 
 import chalk from 'chalk';
@@ -42,10 +42,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import dotenv from 'dotenv';
-dotenv.config({ path: path.join(__dirname, '../web/.env'), quiet: true });
+const envPaths = [
+  path.join(__dirname, '../.env'),
+  path.join(__dirname, '../web/.env'),
+];
+for (const p of envPaths) {
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p, quiet: true });
+  }
+}
 
-const RELAY_URL = process.env.VITE_RELAY_URL;
-const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN;
+const DEFAULT_RELAY_URL = 'https://delay.scobrudot.dev';
+const DEFAULT_AUTH_TOKEN = 'shogun2025';
+
+const RELAY_URL = process.env.VITE_RELAY_URL || DEFAULT_RELAY_URL;
+const AUTH_TOKEN = process.env.VITE_AUTH_TOKEN || DEFAULT_AUTH_TOKEN;
 
 const DEFAULT_PEERS = ['https://delay.scobrudot.dev/zen'];
 
@@ -117,9 +128,9 @@ class WormholeCLI {
     });
   }
 
-  static async create() {
-    const relayUrl = RELAY_URL;
-    const authToken = AUTH_TOKEN;
+  static async create(options = {}) {
+    const relayUrl = options.relayUrl || RELAY_URL;
+    const authToken = options.authToken || AUTH_TOKEN;
 
     const peers = await buildPeerList(relayUrl);
 
@@ -203,11 +214,14 @@ class WormholeCLI {
   }
 
   // Invia file
-  async sendFile(filePath, mode = 'p2p') {
+  async sendFile(filePath, mode = 'p2p', options = {}) {
     if (!fs.existsSync(filePath)) {
       console.log(chalk.red('❌ File non trovato:', filePath));
       return;
     }
+
+    const relayUrl = options.relayUrl || this.relayUrl;
+    const authToken = options.authToken || this.authToken;
 
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
@@ -223,8 +237,8 @@ class WormholeCLI {
         filename: fileName,
         size: stats.size,
         type: this.getMimeType(filePath),
-        relayUrl: this.relayUrl,
-        authToken: this.authToken,
+        relayUrl: relayUrl,
+        authToken: authToken,
         lastModified: stats.mtimeMs,
         mode: mode,
       });
@@ -251,7 +265,7 @@ class WormholeCLI {
       }
 
       console.log('\n' + chalk.gray('Comando per il ricevente:'));
-      console.log(chalk.cyan(`wormhole receive ${code}`));
+      console.log(chalk.cyan(`wh receive ${code}`));
 
       console.log(
         chalk.yellow(
@@ -315,14 +329,15 @@ class WormholeCLI {
   }
 
   // Ricevi file
-  async receiveFile(code) {
+  async receiveFile(code, options = {}) {
+    const relayUrl = options.relayUrl || this.relayUrl;
     this.spinner.start(`Ricerca del trasferimento per: ${code}...`);
 
     // 1. Inizia ascolto Multicast locale per scoperta immediata
     this.listenForMulticastTransfer(code);
 
     // 2. Inizia ricezione via Zen/IPFS
-    this.wormhole.receive(code, this.relayUrl);
+    this.wormhole.receive(code, relayUrl);
 
     // Keep CLI process alive
     setInterval(() => {}, 1000);
@@ -424,46 +439,84 @@ class WormholeCLI {
   }
 }
 
+function parseFlags(commandArgs) {
+  const flags = {
+    positional: [],
+    mode: 'p2p',
+    url: RELAY_URL,
+    token: AUTH_TOKEN,
+  };
+
+  for (let i = 0; i < commandArgs.length; i++) {
+    const arg = commandArgs[i];
+    if (arg === '--ipfs' || arg === '--relay') {
+      flags.mode = 'ipfs';
+    } else if (arg === '--p2p') {
+      flags.mode = 'p2p';
+    } else if ((arg === '--url' || arg === '-u') && commandArgs[i + 1]) {
+      flags.url = commandArgs[++i];
+    } else if ((arg === '--token' || arg === '-t') && commandArgs[i + 1]) {
+      flags.token = commandArgs[++i];
+    } else if (!arg.startsWith('-')) {
+      flags.positional.push(arg);
+    }
+  }
+
+  return flags;
+}
+
 // CLI Interface
 async function main() {
   const args = process.argv.slice(2);
-  const cli = await WormholeCLI.create();
 
-  if (args.length === 0) {
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     console.log(chalk.blue('🌌 WORMHOLE CLI'));
-    console.log(chalk.gray('Trasferimento file P2P sicuro\n'));
+    console.log(chalk.gray('Trasferimento file P2P & IPFS sicuro\n'));
     console.log('Usage:');
-    console.log('  wormhole send <file>     # Invia un file');
-    console.log('  wormhole receive <code>  # Ricevi un file');
-    console.log('  wormhole list           # Lista trasferimenti');
+    console.log('  wh send <file> [options]     # Invia un file');
+    console.log('  wh receive <code> [options]  # Ricevi un file');
+    console.log('  wh list                      # Lista trasferimenti\n');
+    console.log('Opzioni invio/ricezione:');
+    console.log('  --ipfs, --relay              Invia tramite relay IPFS invece di P2P diretto');
+    console.log('  --p2p                        Invia tramite P2P diretto WebRTC (default)');
+    console.log('  -u, --url <url>              Specifica URL del relay IPFS (default: da .env o https://delay.scobrudot.dev)');
+    console.log('  -t, --token <token>          Specifica Bearer token del relay IPFS (default: da .env o shogun2025)');
     return;
   }
 
   const command = args[0];
+  const commandArgs = args.slice(1);
+  const flags = parseFlags(commandArgs);
+
+  const cli = await WormholeCLI.create({
+    relayUrl: flags.url,
+    authToken: flags.token,
+  });
 
   switch (command) {
     case 'send': {
-      if (!args[1]) {
+      const file = flags.positional[0];
+      if (!file) {
         console.log(chalk.red('❌ Specifica il file da inviare'));
         return;
       }
-      const mode = args.includes('--ipfs') || args.includes('--relay') ? 'ipfs' : 'p2p';
-      await cli.sendFile(args[1], mode);
+      await cli.sendFile(file, flags.mode, { relayUrl: flags.url, authToken: flags.token });
       break;
     }
 
-    case 'receive':
-      if (!args[1]) {
+    case 'receive': {
+      const code = flags.positional[0];
+      if (!code) {
         console.log(chalk.red('❌ Specifica il codice di ricezione'));
         return;
       }
-      await cli.receiveFile(args[1]);
+      await cli.receiveFile(code, { relayUrl: flags.url });
       break;
+    }
 
     case 'list':
       await cli.listTransfers();
       break;
-
 
     default:
       console.log(chalk.red(`❌ Comando sconosciuto: ${command}`));
