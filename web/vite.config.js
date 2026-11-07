@@ -37,6 +37,7 @@ function stubNodeModules() {
 }
 
 export default defineConfig({
+  base: './',
   envDir: projectRoot,
   plugins: [stubNodeModules()],
   server: {

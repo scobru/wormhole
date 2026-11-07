@@ -69,6 +69,7 @@ npx wh send <file-path>
 
 | Option | Shorthand | Description | Default |
 |--------|-----------|-------------|---------|
+| `--freenet`, `--fn` | | Send or receive via decentralized Freenet chunk contracts (serverless, async). | `false` |
 | `--p2p` | | Use direct WebRTC DataChannel streaming. | `true` (Default) |
 | `--ipfs`, `--relay` | | Send via IPFS relay instead of direct P2P. | `false` |
 | `--url <url>` | `-u` | Custom IPFS relay URL. | `https://delay.scobrudot.dev` |
@@ -77,17 +78,43 @@ npx wh send <file-path>
 ### Examples
 
 ```bash
-# 1. Direct WebRTC P2P transfer (Recommended, high speed)
+# 1. Sovereign P2P transfer over Freenet (Chunk contracts, async, serverless)
+wh send archive.zip --freenet
+wh receive 92-brave-wave --freenet
+
+# 2. Direct WebRTC P2P transfer (Recommended, high speed)
 wh send my-video.mp4
 wh receive 82-gentle-bird
 
-# 2. Staged transfer via IPFS relay (scobru/delay)
+# 3. Staged transfer via IPFS relay (scobru/delay)
 wh send backup.zip --ipfs
 wh receive 14-calm-wave
 
-# 3. Using a custom IPFS relay
+# 4. Using a custom IPFS relay
 wh send document.pdf --ipfs -u https://my-relay.example.com -t my_secret_token
 ```
+
+---
+
+## 🌌 Freenet Integration: Sovereign dApp & Chunk Storage
+
+Wormhole features native integration with [Freenet](https://freenet.org), following the architectural patterns from [Orto](https://github.com/scobru/orto):
+
+1. **Chunk Contracts (`contracts/chunk.wasm`)**:
+   - Files are sliced into 256 KB chunks, each encrypted client-side using AES-GCM-256 with nonce position binding.
+   - Chunks are stored as immutable, content-addressed contracts (`params = blake3(chunk)`).
+   - No central server, no IPFS pinning service (`delay`), 100% serverless and peer-to-peer.
+
+2. **Rendezvous Channel (`contracts/wormhole_channel.wasm`)**:
+   - A lightweight channel contract keyed by `blake3("wormhole-channel-v1:" + code)`.
+   - Stores the encrypted file manifest (file metadata, chunk addresses list).
+   - Converges deterministically following join-semilattice merge laws.
+
+3. **Web dApp in Freenet Web Container**:
+   - The web interface (`web/`) is vendorized and compiled to run inside Freenet's sandboxed web container.
+   - Run `npm run freenet:publish` to build and deploy or update the web dApp via `fdev`.
+   - **Published Web Contract Address**: `6d7GS576m4QBnsHh6fjdYYJfBZbCkR1W7Cu2xaqa78sp`
+   - **Local Gateway URL**: [http://127.0.0.1:7509/v1/contract/web/6d7GS576m4QBnsHh6fjdYYJfBZbCkR1W7Cu2xaqa78sp/](http://127.0.0.1:7509/v1/contract/web/6d7GS576m4QBnsHh6fjdYYJfBZbCkR1W7Cu2xaqa78sp/)
 
 ---
 

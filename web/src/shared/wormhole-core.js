@@ -1,6 +1,13 @@
 // Removed shogun-relays dependency logic
 
 // Shared config
+import {
+  sendViaFreenet,
+  receiveViaFreenet,
+  isFreenetAvailable,
+  getChannel,
+} from './freenet.js';
+
 const CHUNK_SIZE = 65536; // 64KB chunks
 const ENCRYPTION_CONFIG = {
   saltLength: 16,
@@ -44,6 +51,10 @@ export const WormholeStatus = Object.freeze({
   NOTICE: 'notice',
   WAITING_PEER: 'waiting-peer',
   STREAMING_P2P: 'streaming-p2p',
+  FREENET_UPLOADING_CHUNKS: 'freenet-uploading-chunks',
+  FREENET_PUBLISHING_MANIFEST: 'freenet-publishing-manifest',
+  FREENET_RESOLVING_MANIFEST: 'freenet-resolving-manifest',
+  FREENET_DOWNLOADING_CHUNKS: 'freenet-downloading-chunks',
 });
 
 function arrayBufferToBase64(buffer) {
@@ -408,15 +419,31 @@ async function readStreamToBuffer(stream, totalSize, onProgress) {
 
 export class WormholeCore {
   constructor(options = {}) {
-    if (!options.gun) {
-      throw new Error('A gun instance must be provided via the "gun" option.');
-    }
-    this.gun = options.gun;
+    this.gun = options.gun || null;
     this.onStatusChange = options.onStatusChange || (() => {});
     this.onProgress = options.onProgress || (() => {});
   }
 
   async send({ file, filename, size, type, relayUrl, authToken, lastModified, mode = 'p2p' }) {
+    if (mode === 'freenet') {
+      const code = generateCode();
+      const res = await sendViaFreenet({
+        file,
+        filename,
+        size,
+        type,
+        lastModified,
+        code,
+        onProgress: this.onProgress,
+        onStatusChange: this.onStatusChange,
+      });
+      return code;
+    }
+
+    if (!this.gun) {
+      throw new Error('A gun instance must be provided via the "gun" option when not using Freenet mode.');
+    }
+
     const code = generateCode();
 
     let encryptedFile;
@@ -838,7 +865,56 @@ export class WormholeCore {
     }
   }
 
-  receive(code, relayUrl) {
+  async receive(code, relayUrl, mode = 'auto') {
+    if (mode === 'freenet') {
+      try {
+        const fileData = await receiveViaFreenet(code, {
+          onProgress: this.onProgress,
+          onStatusChange: this.onStatusChange,
+        });
+        const blob = fileData.file || new Blob([fileData.data], { type: fileData.type });
+        this.onStatusChange({
+          code,
+          status: WormholeStatus.COMPLETED,
+          message: 'File ricevuto con successo da Freenet!',
+          fileData: {
+            blob,
+            filename: fileData.filename,
+            buffer: fileData.data,
+            metadata: {
+              filename: fileData.filename,
+              size: fileData.size,
+              type: fileData.type,
+            },
+          },
+        });
+        return fileData;
+      } catch (err) {
+        this.onStatusChange({
+          code,
+          status: WormholeStatus.ERROR,
+          message: err.message,
+        });
+        throw err;
+      }
+    }
+
+    if (!this.gun) {
+      return this.receive(code, relayUrl, 'freenet');
+    }
+
+    if (mode === 'auto') {
+      try {
+        const fnAvailable = await isFreenetAvailable(800);
+        if (fnAvailable) {
+          const fnState = await getChannel(code, false).catch(() => null);
+          if (fnState && fnState.manifest) {
+            return this.receive(code, relayUrl, 'freenet');
+          }
+        }
+      } catch (_) {}
+    }
+
     this.onStatusChange({
       code,
       status: WormholeStatus.CONNECTING,
@@ -1202,6 +1278,12 @@ export class WormholeCore {
 }
 
 // Export utility functions for use in environment-specific code
-export { generateCode, base64ToChunks };
+export {
+  generateCode,
+  base64ToChunks,
+  sendViaFreenet,
+  receiveViaFreenet,
+  isFreenetAvailable,
+};
 
 

@@ -6,6 +6,16 @@ const RELAY_URL = import.meta.env.VITE_RELAY_URL;
 const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
+export function isFreenetEnvironment() {
+  if (typeof window === 'undefined' || !window.location) return false;
+  return (
+    window.location.port === '7509' ||
+    window.location.pathname.includes('/v1/contract/') ||
+    window.location.hostname.endsWith('freenet') ||
+    window.location.protocol === 'freenet:'
+  );
+}
+
 let elements = null;
 let wormhole = null;
 let initPromise = null;
@@ -48,18 +58,25 @@ async function getWormhole() {
   }
 
   initPromise = (async () => {
-    const zenInstance = ZEN;
-    if (!zenInstance) {
-      throw new Error('Zen non è stato caricato correttamente.');
+    let gunInstance = null;
+    const isFreenet = isFreenetEnvironment();
+
+    // In Freenet mode, Gun / Zen is not used: Freenet contracts and gateway are used exclusively
+    if (!isFreenet) {
+      const zenInstance = ZEN;
+      if (zenInstance && typeof zenInstance === 'function') {
+        try {
+          const defaultPeers = ['https://delay.scobrudot.dev/zen'];
+          const peerSet = new Set(defaultPeers);
+          gunInstance = new zenInstance({
+            peers: Array.from(peerSet),
+            localStorage: false,
+          });
+        } catch (e) {
+          console.warn('[Wormhole] Zen init notice:', e);
+        }
+      }
     }
-
-    const defaultPeers = ['https://delay.scobrudot.dev/zen'];
-    const peerSet = new Set(defaultPeers);
-
-    const gunInstance = new zenInstance({
-      peers: Array.from(peerSet),
-      localStorage: false,
-    });
 
     wormhole = new WormholeCore({
       gun: gunInstance,
@@ -353,8 +370,10 @@ async function sendFile() {
     return;
   }
 
-  const selectedMode =
-    document.querySelector('input[name="transfer-mode"]:checked')?.value || 'p2p';
+  const isFreenet = isFreenetEnvironment();
+  const selectedMode = isFreenet
+    ? 'freenet'
+    : (document.querySelector('input[name="transfer-mode"]:checked')?.value || 'p2p');
 
   try {
     const transferCode = await instance.send({
@@ -412,7 +431,8 @@ async function connectToSender() {
     return;
   }
 
-  instance.receive(code, RELAY_URL);
+  const isFreenet = isFreenetEnvironment();
+  instance.receive(code, RELAY_URL, isFreenet ? 'freenet' : 'auto');
 }
 
 function handleStatusChange({ status, message, metadata, fileData }) {
@@ -435,12 +455,24 @@ function handleStatusChange({ status, message, metadata, fileData }) {
     case WormholeStatus.PINNING:
       showStatus('send', 'info', message);
       break;
+    case WormholeStatus.FREENET_UPLOADING_CHUNKS:
+    case WormholeStatus.FREENET_PUBLISHING_MANIFEST:
+      showStatus('send', 'info', message);
+      break;
+    case WormholeStatus.FREENET_RESOLVING_MANIFEST:
+    case WormholeStatus.FREENET_DOWNLOADING_CHUNKS:
+      showStatus('receive', 'info', message);
+      break;
     case WormholeStatus.SENT:
       showStatus('send', 'success', message);
       break;
     case WormholeStatus.COMPLETED:
+      if (fileData?.blob) {
+        downloadBlob(fileData.blob, fileData.filename ?? 'download');
+      }
       showStatus(state.activeTab, 'success', message);
       setButtonLoading(elements.sendButton, false);
+      setButtonLoading(elements.receiveButton, false);
       elements.sendButton.disabled = true;
       window.setTimeout(resetUI, 4000);
       break;
@@ -579,6 +611,10 @@ function resetUI() {
   });
 
   elements.receiveCodeInput.value = '';
+  if (isFreenetEnvironment()) {
+    const fnRadio = document.getElementById('mode-freenet');
+    if (fnRadio) fnRadio.checked = true;
+  }
   switchTab('send');
 }
 
@@ -749,6 +785,28 @@ function setup() {
   setupViewNavigation();
   setupCopyButtons();
   resetUI();
+
+  // Auto-detect Freenet gateway environment
+  if (isFreenetEnvironment()) {
+    const fnRadio = document.getElementById('mode-freenet');
+    if (fnRadio) {
+      fnRadio.checked = true;
+    }
+    const modeSelector = document.getElementById('routing-mode-selector');
+    if (modeSelector) {
+      modeSelector.classList.add('hidden');
+    }
+    const fnBanner = document.getElementById('freenet-mode-banner');
+    if (fnBanner) {
+      fnBanner.classList.remove('hidden');
+    }
+    const badge = document.getElementById('protocol-badge');
+    if (badge) {
+      badge.textContent = 'Freenet Native';
+      badge.className = 'text-indigo-400 font-mono text-[11px] tracking-wide bg-indigo-950/40 px-2 py-0.5 rounded-full border border-indigo-500/20';
+    }
+  }
+
   getWormhole().catch((e) => console.warn('Wormhole pre-init notice:', e));
 }
 

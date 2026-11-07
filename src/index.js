@@ -132,12 +132,16 @@ class WormholeCLI {
     const relayUrl = options.relayUrl || RELAY_URL;
     const authToken = options.authToken || AUTH_TOKEN;
 
-    const peers = await buildPeerList(relayUrl);
-
-    const gun = new ZEN({
-      peers,
-      localStorage: false,
-    });
+    let gun = null;
+    try {
+      const peers = await buildPeerList(relayUrl);
+      gun = new ZEN({
+        peers,
+        localStorage: false,
+      });
+    } catch (_) {
+      // ZEN is optional when using pure Freenet mode
+    }
 
     return new WormholeCLI({ gun, relayUrl, authToken });
   }
@@ -153,6 +157,10 @@ class WormholeCLI {
       case WormholeStatus.CONNECTING:
       case WormholeStatus.DOWNLOADING:
       case WormholeStatus.DECRYPTING:
+      case WormholeStatus.FREENET_UPLOADING_CHUNKS:
+      case WormholeStatus.FREENET_PUBLISHING_MANIFEST:
+      case WormholeStatus.FREENET_RESOLVING_MANIFEST:
+      case WormholeStatus.FREENET_DOWNLOADING_CHUNKS:
         if (this.spinner.isSpinning) {
           this.spinner.text = message;
         } else {
@@ -165,11 +173,15 @@ class WormholeCLI {
         break;
 
       case WormholeStatus.COMPLETED:
-        if (this.spinner.isSpinning) {
-          this.spinner.succeed('Trasferimento P2P completato con successo dal ricevente!');
+        if (fileData) {
+          this.saveFile(fileData, this.spinner);
+        } else {
+          if (this.spinner.isSpinning) {
+            this.spinner.succeed(message || 'Trasferimento completato con successo!');
+          }
+          console.log(chalk.gray('👋 Arrivederci!\n'));
+          setTimeout(() => process.exit(0), 500);
         }
-        console.log(chalk.gray('👋 Arrivederci!\n'));
-        setTimeout(() => process.exit(0), 500);
         break;
 
       case WormholeStatus.ERROR:
@@ -253,10 +265,17 @@ class WormholeCLI {
         // Ignore clipboard write error
       }
 
+      const modeLabel =
+        mode === 'freenet'
+          ? 'Freenet Decentralized Storage (Chunk Contracts)'
+          : mode === 'p2p'
+            ? 'P2P Diretto (WebRTC)'
+            : 'IPFS Relay';
+
       console.log('');
-      console.log(chalk.bold.cyan('🌌 WORMHOLE P2P TRANSFER'));
+      console.log(chalk.bold.cyan('🌌 WORMHOLE FILE TRANSFER'));
       console.log(chalk.gray(`📁 File: ${fileName} (${filesize(stats.size)})`));
-      console.log(chalk.gray(`⚡ Modalità: ${mode === 'p2p' ? 'P2P Diretto (WebRTC)' : 'IPFS Relay'}`));
+      console.log(chalk.gray(`⚡ Modalità: ${modeLabel}`));
 
       console.log('\n' + chalk.green.bold('🎯 Condividi questo codice:'));
       console.log(chalk.black.bgWhite.bold(` ${code} `));
@@ -265,13 +284,29 @@ class WormholeCLI {
       }
 
       console.log('\n' + chalk.gray('Comando per il ricevente:'));
-      console.log(chalk.cyan(`wh receive ${code}`));
+      console.log(chalk.cyan(`wh receive ${code}${mode === 'freenet' ? ' --freenet' : ''}`));
 
       console.log(
         chalk.yellow(
           '\n🔒 Questo codice è anche la chiave di decrittazione end-to-end. Mantienilo segreto.'
         )
       );
+
+      if (mode === 'freenet') {
+        console.log(
+          chalk.green(
+            '\n✨ File memorizzato sulla rete decentralizzata Freenet!'
+          )
+        );
+        console.log(
+          chalk.gray(
+            '💡 Il ricevente può scaricare il file in qualsiasi momento con il codice.'
+          )
+        );
+        console.log(chalk.gray('👋 Puoi chiudere questo terminale.\n'));
+        setTimeout(() => process.exit(0), 1000);
+        return;
+      }
 
       if (mode === 'p2p') {
         console.log(
@@ -331,13 +366,16 @@ class WormholeCLI {
   // Ricevi file
   async receiveFile(code, options = {}) {
     const relayUrl = options.relayUrl || this.relayUrl;
+    const mode = options.mode || 'auto';
     this.spinner.start(`Ricerca del trasferimento per: ${code}...`);
 
-    // 1. Inizia ascolto Multicast locale per scoperta immediata
-    this.listenForMulticastTransfer(code);
+    if (mode !== 'freenet') {
+      // 1. Inizia ascolto Multicast locale per scoperta immediata
+      this.listenForMulticastTransfer(code);
+    }
 
-    // 2. Inizia ricezione via Zen/IPFS
-    this.wormhole.receive(code, relayUrl);
+    // 2. Inizia ricezione via Freenet o Zen/IPFS
+    this.wormhole.receive(code, relayUrl, mode);
 
     // Keep CLI process alive
     setInterval(() => {}, 1000);
@@ -449,7 +487,9 @@ function parseFlags(commandArgs) {
 
   for (let i = 0; i < commandArgs.length; i++) {
     const arg = commandArgs[i];
-    if (arg === '--ipfs' || arg === '--relay') {
+    if (arg === '--freenet' || arg === '--fn') {
+      flags.mode = 'freenet';
+    } else if (arg === '--ipfs' || arg === '--relay') {
       flags.mode = 'ipfs';
     } else if (arg === '--p2p') {
       flags.mode = 'p2p';
@@ -471,14 +511,15 @@ async function main() {
 
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     console.log(chalk.blue('🌌 WORMHOLE CLI'));
-    console.log(chalk.gray('Trasferimento file P2P & IPFS sicuro\n'));
+    console.log(chalk.gray('Trasferimento file P2P, IPFS & Freenet sicuro\n'));
     console.log('Usage:');
     console.log('  wh send <file> [options]     # Invia un file');
     console.log('  wh receive <code> [options]  # Ricevi un file');
     console.log('  wh list                      # Lista trasferimenti\n');
     console.log('Opzioni invio/ricezione:');
-    console.log('  --ipfs, --relay              Invia tramite relay IPFS invece di P2P diretto');
+    console.log('  --freenet, --fn              Invia o ricevi tramite rete decentralizzata Freenet');
     console.log('  --p2p                        Invia tramite P2P diretto WebRTC (default)');
+    console.log('  --ipfs, --relay              Invia tramite relay IPFS invece di P2P diretto');
     console.log('  -u, --url <url>              Specifica URL del relay IPFS (default: da .env o https://delay.scobrudot.dev)');
     console.log('  -t, --token <token>          Specifica Bearer token del relay IPFS (default: da .env o shogun2025)');
     return;
@@ -491,6 +532,7 @@ async function main() {
   const cli = await WormholeCLI.create({
     relayUrl: flags.url,
     authToken: flags.token,
+    mode: flags.mode,
   });
 
   switch (command) {
@@ -510,7 +552,7 @@ async function main() {
         console.log(chalk.red('❌ Specifica il codice di ricezione'));
         return;
       }
-      await cli.receiveFile(code, { relayUrl: flags.url });
+      await cli.receiveFile(code, { relayUrl: flags.url, mode: flags.mode });
       break;
     }
 
