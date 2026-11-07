@@ -50,11 +50,14 @@ The CLI binary is named **`wh`** to prevent name collisions with `magic-wormhole
 ### Installation
 
 ```bash
-# Global installation
-npm install -g wormhole
+# Global installation from GitHub
+npm install -g git+https://github.com/scobru/wormhole.git
 
-# Or run instantly via npx
-npx wh send <file-path>
+# Or run instantly via npx (Zero install)
+npx github:scobru/wormhole send <file-path>
+
+# Or from local clone:
+# git clone https://github.com/scobru/wormhole.git && cd wormhole && npm install && npm link
 ```
 
 ### Commands
