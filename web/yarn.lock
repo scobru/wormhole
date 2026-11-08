@@ -1137,6 +1137,13 @@ fraction.js@^5.3.4:
   resolved "https://registry.npmjs.org/fraction.js/-/fraction.js-5.3.4.tgz"
   integrity sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==
 
+"freenet-blob@github:scobru/freenet-blob":
+  version "1.0.0"
+  resolved "git+ssh://git@github.com/scobru/freenet-blob.git#6164cc59e267358c1766fa0955c58d99e58a23eb"
+  dependencies:
+    "@freenetorg/freenet-stdlib" "^0.4.0"
+    "@noble/hashes" "^2.4.0"
+
 fs-extra@11.1.0:
   version "11.1.0"
   resolved "https://registry.npmjs.org/fs-extra/-/fs-extra-11.1.0.tgz"
