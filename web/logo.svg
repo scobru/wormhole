@@ -1,82 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <defs>
-    <!-- Background Singularity Glow -->
-    <radialGradient id="wh-core-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.9" />
-      <stop offset="25%" stop-color="#8a3ffc" stop-opacity="0.6" />
-      <stop offset="60%" stop-color="#3b0764" stop-opacity="0.25" />
-      <stop offset="100%" stop-color="#05070d" stop-opacity="0" />
-    </radialGradient>
+  <!-- Minimal Dark Monochrome Singularity Logo -->
+  <rect width="512" height="512" rx="112" fill="#09090b" />
+  <rect width="504" height="504" x="4" y="4" rx="108" stroke="#27272a" stroke-width="8" />
 
-    <!-- Vibrant Cyber-Quantum Gradients -->
-    <linearGradient id="wh-grad-a" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="50%" stop-color="#8a3ffc" />
-      <stop offset="100%" stop-color="#c084fc" />
-    </linearGradient>
+  <!-- Concentric Precision Aperture Rings -->
+  <circle cx="256" cy="256" r="176" stroke="#27272a" stroke-width="2" stroke-dasharray="6 6" />
+  <circle cx="256" cy="256" r="128" stroke="#3f3f46" stroke-width="2" />
+  <circle cx="256" cy="256" r="80" stroke="#52525b" stroke-width="2" />
 
-    <linearGradient id="wh-grad-b" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="45%" stop-color="#a855f7" />
-      <stop offset="100%" stop-color="#ec4899" />
-    </linearGradient>
+  <!-- Minimalist Wormhole "W" Vortex Bridge -->
+  <path d="M148 188 L194 326 C200 344 214 352 228 340 L256 306 L284 340 C298 352 312 344 318 326 L364 188"
+    stroke="#f4f4f5" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
 
-    <linearGradient id="wh-grad-w" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#8a3ffc" />
-      <stop offset="50%" stop-color="#00f2fe" />
-      <stop offset="100%" stop-color="#ffffff" />
-    </linearGradient>
-
-    <!-- Outer Orbital Ring Gradient -->
-    <linearGradient id="wh-ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.9" />
-      <stop offset="30%" stop-color="#8a3ffc" stop-opacity="0.3" />
-      <stop offset="70%" stop-color="#ec4899" stop-opacity="0.8" />
-      <stop offset="100%" stop-color="#00f2fe" stop-opacity="0.2" />
-    </linearGradient>
-
-    <!-- Specular Glow Filter -->
-    <filter id="wh-filter-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  </defs>
-
-  <!-- Ambient Gravitational Halo -->
-  <circle cx="256" cy="256" r="230" fill="url(#wh-core-glow)" />
-
-  <!-- Outer Quantum Warp Ring 1 -->
-  <ellipse cx="256" cy="256" rx="210" ry="85"
-    transform="rotate(-28 256 256)"
-    stroke="url(#wh-ring-grad)" stroke-width="4.5" stroke-dasharray="14 10 28 8"
-    opacity="0.75" />
-
-  <!-- Outer Quantum Warp Ring 2 -->
-  <ellipse cx="256" cy="256" rx="200" ry="70"
-    transform="rotate(38 256 256)"
-    stroke="url(#wh-grad-a)" stroke-width="3" stroke-dasharray="6 8 36 6"
-    opacity="0.6" />
-
-  <!-- Vortex Accretion Spiral Stream Left -->
-  <path d="M70 256 C70 153 153 70 256 70 C330 70 395 112 425 175 C440 205 440 245 415 275 C385 310 330 330 285 320 C240 310 215 275 220 240 C225 205 255 185 285 195 C310 203 320 225 315 245 C310 260 295 270 280 265 C268 260 264 248 268 240"
-    stroke="url(#wh-grad-b)" stroke-width="9" stroke-linecap="round"
-    filter="url(#wh-filter-glow)" fill="none" opacity="0.85" />
-
-  <!-- Vortex Accretion Spiral Stream Right -->
-  <path d="M442 256 C442 359 359 442 256 442 C182 442 117 400 87 337 C72 307 72 267 97 237 C127 202 182 182 227 192 C272 202 297 237 292 272 C287 307 257 327 227 317 C202 309 192 287 197 267 C202 252 217 242 232 247 C244 252 248 264 244 272"
-    stroke="url(#wh-grad-a)" stroke-width="9" stroke-linecap="round"
-    filter="url(#wh-filter-glow)" fill="none" opacity="0.85" />
-
-  <!-- Iconic Stylized "W" Singularity Bridge -->
-  <path d="M140 180 L185 340 C192 365 212 375 230 360 L256 315 L282 360 C300 375 320 365 327 340 L372 180"
-    stroke="url(#wh-grad-w)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"
-    filter="url(#wh-filter-glow)" fill="none" />
-
-  <!-- Inner Singularity Event Horizon Core -->
-  <circle cx="256" cy="256" r="32" fill="#07090e" stroke="url(#wh-grad-a)" stroke-width="5" />
-  <circle cx="256" cy="256" r="14" fill="#00f2fe" filter="url(#wh-filter-glow)" />
-  <circle cx="256" cy="256" r="6" fill="#ffffff" />
+  <!-- Singularity Core -->
+  <circle cx="256" cy="256" r="16" fill="#09090b" stroke="#f4f4f5" stroke-width="6" />
+  <circle cx="256" cy="256" r="6" fill="#f4f4f5" />
 </svg>

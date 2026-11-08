@@ -187,8 +187,8 @@ function wireEventListeners() {
       library.tracks.forEach((track) => {
         const btn = document.createElement('button');
         btn.className =
-          'btn btn-outline border-purple-500/30 text-purple-200 hover:bg-purple-900/30 justify-start text-left w-full h-auto py-2.5';
-        btn.innerHTML = `<div class="truncate"><span class="font-semibold text-sm">${track.title}</span><br/><span class="text-xs text-slate-400">${track.artist}</span></div>`;
+          'btn btn-outline border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 justify-start text-left w-full h-auto py-2.5';
+        btn.innerHTML = `<div class="truncate"><span class="font-semibold text-sm">${track.title}</span><br/><span class="text-xs text-zinc-400">${track.artist}</span></div>`;
         btn.onclick = async () => {
           elements.labModal.close();
           showStatus('send', 'info', `Scaricamento traccia: ${track.title}...`);
@@ -311,19 +311,19 @@ function handleFileSelect(file) {
 
   const iconWrapper = document.createElement('div');
   iconWrapper.className =
-    'w-10 h-10 rounded-lg bg-purple-900/40 border border-purple-500/30 flex items-center justify-center text-xl shrink-0';
+    'w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xl shrink-0';
   iconWrapper.textContent = icon;
 
   const textWrapper = document.createElement('div');
   textWrapper.className = 'flex flex-col min-w-0';
 
   const nameEl = document.createElement('span');
-  nameEl.className = 'text-xs sm:text-sm font-semibold text-slate-100 truncate';
+  nameEl.className = 'text-xs sm:text-sm font-medium text-zinc-100 truncate';
   nameEl.textContent = file.name;
   nameEl.title = file.name;
 
   const metaRow = document.createElement('div');
-  metaRow.className = 'flex items-center gap-2 text-[11px] text-slate-400 mt-0.5';
+  metaRow.className = 'flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5';
   metaRow.innerHTML = `<span>${formattedSize}</span> &bull; <span class="font-mono">${file.type || 'Generic file'}</span>`;
 
   textWrapper.appendChild(nameEl);
@@ -540,17 +540,17 @@ function showStatus(tab, type, message) {
 
   const alertColor =
     type === 'error'
-      ? 'bg-red-950/70 border-red-500/30 text-red-200'
+      ? 'bg-red-950/40 border-red-900/40 text-red-200'
       : type === 'success'
-      ? 'bg-emerald-950/70 border-emerald-500/30 text-emerald-200'
-      : 'bg-purple-950/60 border-purple-500/30 text-purple-200';
+      ? 'bg-emerald-950/40 border-emerald-900/40 text-emerald-200'
+      : 'bg-zinc-900 border-zinc-800 text-zinc-200';
 
   const iconSvg =
     type === 'error'
       ? '<svg class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
       : type === 'success'
       ? '<svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
-      : '<svg class="w-4 h-4 text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+      : '<svg class="w-4 h-4 text-zinc-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
 
   statusContainer.textContent = '';
 
@@ -803,7 +803,7 @@ function setup() {
     const badge = document.getElementById('protocol-badge');
     if (badge) {
       badge.textContent = 'Freenet Native';
-      badge.className = 'text-indigo-400 font-mono text-[11px] tracking-wide bg-indigo-950/40 px-2 py-0.5 rounded-full border border-indigo-500/20';
+      badge.className = 'text-zinc-400 font-mono text-[11px] tracking-wide bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800';
     }
   }
 
