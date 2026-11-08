@@ -9,7 +9,7 @@
   },
   "scripts": {
     "cli": "node src/index.js",
-    "build": "npm run --prefix web build && node -e \"const fs=require('fs'); fs.rmSync('dist', {recursive:true, force:true}); fs.cpSync('web/dist', 'dist', {recursive:true});\"",
+    "build": "npm --prefix web install --include=dev && npm run --prefix web build && node -e \"const fs=require('fs'); fs.rmSync('dist', {recursive:true, force:true}); fs.cpSync('web/dist', 'dist', {recursive:true});\"",
     "dev": "cd web && yarn dev",
     "start": "npx serve dist",
     "test": "node test-freenet.js",
