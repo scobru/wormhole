@@ -213,14 +213,14 @@ function wireEventListeners() {
             handleFileSelect(file);
           } catch (e) {
             console.error(e);
-            showStatus('send', 'error', 'Errore durante lo scaricamento della traccia dalla libreria.');
+            showStatus('send', 'error', 'Error downloading track from library.');
           }
         };
         elements.labTracks.appendChild(btn);
       });
       elements.labModal.showModal();
     } else {
-      showStatus('send', 'info', 'Libreria vuota o non accessibile.');
+      showStatus('send', 'info', 'Library empty or unavailable.');
     }
   });
 }
@@ -266,7 +266,7 @@ function switchTab(tab) {
 
 async function copyCode() {
   if (!state.currentCode) {
-    showStatus('send', 'info', 'Nessun codice di sincronizzazione disponibile.');
+    showStatus('send', 'info', 'No sync code available.');
     return;
   }
 
@@ -274,13 +274,13 @@ async function copyCode() {
 
   try {
     await navigator.clipboard.writeText(state.currentCode);
-    showStatus('send', 'success', 'Codice copiato negli appunti!');
+    showStatus('send', 'success', 'Sync code copied to clipboard!');
 
     elements.copyCodeButton.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
-      <span>Copiato!</span>
+      <span>Copied!</span>
     `;
     elements.copyCodeButton.classList.add('border-emerald-500/50');
 
@@ -342,7 +342,7 @@ function handleFileSelect(file) {
   elements.fileDetails.appendChild(iconWrapper);
   elements.fileDetails.appendChild(textWrapper);
 
-  showStatus('send', 'success', 'File pronto per il trasferimento.');
+  showStatus('send', 'success', 'File ready for transfer.');
   window.setTimeout(() => {
     if (elements.status.send) elements.status.send.textContent = '';
   }, 2500);
@@ -367,14 +367,14 @@ async function sendFile() {
 
   let instance = null;
   try {
-    showStatus('send', 'info', 'Inizializzazione rete in corso...');
+    showStatus('send', 'info', 'Initializing network...');
     instance = await getWormhole();
     if (!instance) {
-      throw new Error('Inizializzazione istanza fallita.');
+      throw new Error('Failed to initialize network instance.');
     }
   } catch (initErr) {
     console.error('Initialization error:', initErr);
-    showStatus('send', 'error', 'Errore inizializzazione rete.');
+    showStatus('send', 'error', 'Network initialization error.');
     state.transferInProgress = false;
     setButtonLoading(elements.sendButton, false);
     return;
@@ -427,10 +427,13 @@ async function sendFile() {
     if (isFn || isIpfs) {
       state.transferInProgress = false;
       setButtonLoading(elements.sendButton, false);
+      if (elements.progressContainers?.send) {
+        elements.progressContainers.send.classList.add('hidden');
+      }
     }
   } catch (error) {
     console.error(error);
-    showStatus('send', 'error', `Upload fallito: ${error.message ?? 'Errore sconosciuto'}`);
+    showStatus('send', 'error', `Upload failed: ${error.message ?? 'Unknown error'}`);
     state.transferInProgress = false;
     setButtonLoading(elements.sendButton, false);
   }
@@ -440,12 +443,12 @@ async function connectToSender() {
   const code = elements.receiveCodeInput.value.trim();
 
   if (!code) {
-    showStatus('receive', 'error', 'Inserisci un codice di sincronizzazione.');
+    showStatus('receive', 'error', 'Please enter a sync code.');
     return;
   }
 
   if (state.transferInProgress) {
-    showStatus('receive', 'info', 'Un altro trasferimento è già in corso.');
+    showStatus('receive', 'info', 'Another transfer is already in progress.');
     return;
   }
 
@@ -455,14 +458,14 @@ async function connectToSender() {
 
   let instance = null;
   try {
-    showStatus('receive', 'info', 'Inizializzazione rete in corso...');
+    showStatus('receive', 'info', 'Initializing network...');
     instance = await getWormhole();
     if (!instance) {
-      throw new Error('Inizializzazione istanza fallita.');
+      throw new Error('Failed to initialize network instance.');
     }
   } catch (initErr) {
     console.error('Initialization error:', initErr);
-    showStatus('receive', 'error', 'Errore inizializzazione rete.');
+    showStatus('receive', 'error', 'Network initialization error.');
     state.transferInProgress = false;
     setButtonLoading(elements.receiveButton, false);
     return;
@@ -501,11 +504,14 @@ function handleStatusChange({ status, message, metadata, fileData }) {
       showStatus('receive', 'info', message);
       break;
     case WormholeStatus.SENT:
+      if (elements.progressContainers?.send) {
+        elements.progressContainers.send.classList.add('hidden');
+      }
       showStatus(
         'send',
         'success',
         isFreenetEnvironment()
-          ? 'File cifrato e pubblicato su Freenet! Puoi chiudere la finestra in sicurezza.'
+          ? 'File encrypted & published to Freenet! You can safely close this window.'
           : message
       );
       break;
@@ -545,7 +551,7 @@ function handleStatusChange({ status, message, metadata, fileData }) {
       showStatus(
         'receive',
         'info',
-        `Trasferimento trovato: ${metadata?.filename ?? 'file'} (${sizeInMb} MB)`
+        `Transfer found: ${metadata?.filename ?? 'file'} (${sizeInMb} MB)`
       );
       break;
     }
@@ -812,7 +818,7 @@ function setupCopyButtons() {
           <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          <span>Copiato!</span>
+          <span>Copied!</span>
         `;
         setTimeout(() => {
           btn.classList.remove('copied');

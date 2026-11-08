@@ -72,7 +72,7 @@ function arrayBufferToBase64(buffer) {
 
 function base64ToUint8Array(base64) {
   if (typeof base64 !== 'string' || base64.trim() === '') {
-    throw new Error('Metadati di cifratura mancanti o non validi.');
+    throw new Error('Missing or invalid encryption metadata.');
   }
   const sanitized = base64.replace(/[\r\n\s]/g, '');
   try {
@@ -87,13 +87,13 @@ function base64ToUint8Array(base64) {
     }
     return Uint8Array.from(Buffer.from(sanitized, 'base64'));
   } catch (error) {
-    throw new Error('Metadati di cifratura corrotti (base64 non valido).');
+    throw new Error('Corrupted encryption metadata (invalid base64).');
   }
 }
 
 function normalizeToUint8Array(value, label) {
   if (!value && value !== 0) {
-    throw new Error(`Metadati di cifratura incompleti: ${label} assente.`);
+    throw new Error(`Incomplete encryption metadata: ${label} missing.`);
   }
 
   if (value instanceof Uint8Array) {
@@ -117,7 +117,7 @@ function normalizeToUint8Array(value, label) {
     }
   }
 
-  throw new Error(`Formato metadati di cifratura non supportato per ${label}.`);
+  throw new Error(`Unsupported encryption metadata format for ${label}.`);
 }
 
 function parseSerializedMetadata(serialized) {
@@ -127,7 +127,7 @@ function parseSerializedMetadata(serialized) {
   try {
     return JSON.parse(serialized);
   } catch (error) {
-    console.warn('Impossibile parsare metadati di cifratura serializzati:', error);
+    console.warn('Unable to parse serialized encryption metadata:', error);
     return null;
   }
 }
@@ -453,7 +453,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.ENCRYPTING,
-        message: 'Cifratura del file in corso...',
+        message: 'Encrypting file...',
       });
 
       const fallbackLastModified =
@@ -472,11 +472,11 @@ export class WormholeCore {
       encryptedFile = encryptionResult.encryptedFile;
       encryptionMetadata = encryptionResult.encryptionMetadata;
     } catch (error) {
-      console.error('Errore durante la cifratura:', error);
+      console.error('Encryption error:', error);
       this.onStatusChange({
         code,
         status: WormholeStatus.ERROR,
-        message: `Cifratura fallita: ${error.message}`,
+        message: `Encryption failed: ${error.message}`,
       });
       throw error;
     }
@@ -486,7 +486,7 @@ export class WormholeCore {
     if (mode === 'p2p') {
       const PeerConnectionClass = globalThis.RTCPeerConnection;
       if (!PeerConnectionClass) {
-        throw new Error('WebRTC (RTCPeerConnection) non è supportato in questo ambiente.');
+        throw new Error('WebRTC (RTCPeerConnection) is not supported in this environment.');
       }
 
       const arrayBuffer = await encryptedFile.arrayBuffer();
@@ -564,7 +564,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.WAITING_PEER,
-        message: 'File cifrato pronto! In attesa che il ricevente inserisca il codice...',
+        message: 'Encrypted file ready! Waiting for recipient to enter sync code...',
       });
 
       let answerApplied = false;
@@ -579,7 +579,7 @@ export class WormholeCore {
             }
             pendingCandidates.length = 0;
           } catch (e) {
-            console.error('Errore applicando SDP Answer:', e);
+            console.error('Error applying SDP Answer:', e);
           }
         }
       });
@@ -592,7 +592,7 @@ export class WormholeCore {
         this.onStatusChange({
           code,
           status: WormholeStatus.STREAMING_P2P,
-          message: `Connessione WebRTC P2P attiva! Invio di ${filename} (${totalChunks} chunk da 64KB)...`,
+          message: `WebRTC P2P stream active! Sending ${filename} (${totalChunks} 64KB chunks)...`,
         });
 
         // 1. Send Header
@@ -611,7 +611,7 @@ export class WormholeCore {
         dataChannel.bufferedAmountLowThreshold = 1024 * 1024; // 1MB
         for (let i = 0; i < totalChunks; i += 1) {
           if (dataChannel.readyState !== 'open') {
-            throw new Error('Canale WebRTC chiuso durante il trasferimento.');
+            throw new Error('WebRTC channel closed during transfer.');
           }
 
           const start = i * CHUNK_SIZE;
@@ -660,7 +660,7 @@ export class WormholeCore {
               this.onStatusChange({
                 code,
                 status: WormholeStatus.COMPLETED,
-                message: 'Trasferimento WebRTC P2P completato con successo!',
+                message: 'WebRTC P2P transfer completed successfully!',
               });
               setTimeout(() => {
                 try {
@@ -679,7 +679,7 @@ export class WormholeCore {
           this.onStatusChange({
             code,
             status: WormholeStatus.COMPLETED,
-            message: 'Trasferimento WebRTC P2P completato dal ricevente!',
+            message: 'WebRTC P2P transfer completed by recipient!',
           });
           setTimeout(() => {
             try {
@@ -707,19 +707,19 @@ export class WormholeCore {
     this.onStatusChange({
       code,
       status: WormholeStatus.CHECKING_RELAY,
-      message: 'Verifica connessione al relay IPFS...',
+      message: 'Checking IPFS relay connection...',
     });
 
     try {
       const healthCheck = await fetch(`${targetRelay}/health`);
       if (!healthCheck.ok) {
-        throw new Error('Relay IPFS non raggiungibile');
+        throw new Error('IPFS relay unreachable');
       }
     } catch (error) {
       this.onStatusChange({
         code,
         status: WormholeStatus.ERROR,
-        message: `Errore di connessione al relay IPFS: ${error.message}`,
+        message: `IPFS relay connection error: ${error.message}`,
       });
       throw error;
     }
@@ -729,7 +729,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.UPLOADING,
-        message: `Caricamento di ${filename} sul relay IPFS...`,
+        message: `Uploading ${filename} to IPFS relay...`,
       });
 
       const formData = new FormData();
@@ -748,12 +748,12 @@ export class WormholeCore {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Upload fallito';
+        let errorMessage = 'Upload failed';
         try {
           const errorResult = await response.json();
-          errorMessage = errorResult.error || `Upload fallito (${response.status})`;
+          errorMessage = errorResult.error || `Upload failed (${response.status})`;
         } catch {
-          errorMessage = `Upload fallito con status ${response.status}`;
+          errorMessage = `Upload failed with status ${response.status}`;
         }
         this.onStatusChange({
           code,
@@ -765,7 +765,7 @@ export class WormholeCore {
 
       const result = await response.json();
       if (!result.success || !result.file?.hash) {
-        const errorMessage = result.error || 'Risposta non valida dal relay IPFS';
+        const errorMessage = result.error || 'Invalid response from IPFS relay';
         this.onStatusChange({
           code,
           status: WormholeStatus.ERROR,
@@ -779,7 +779,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.PINNING,
-        message: 'File aggiunto a IPFS. In attesa della conferma del pin...',
+        message: 'File pinned to IPFS. Awaiting pin confirmation...',
       });
 
       // Save metadata to Gun
@@ -805,7 +805,7 @@ export class WormholeCore {
       this.onStatusChange({
         code,
         status: WormholeStatus.SENT,
-        message: 'File disponibile sul relay. Condividi il codice per iniziare il download.',
+        message: 'File ready on relay. Share sync code to begin download.',
       });
 
       // Monitor for completion to unpin
@@ -816,14 +816,14 @@ export class WormholeCore {
           this.onStatusChange({
             code,
             status: WormholeStatus.COMPLETED,
-            message: 'Trasferimento completato dal ricevente!',
+            message: 'Transfer completed by recipient!',
           });
 
           try {
             this.onStatusChange({
               code,
               status: WormholeStatus.UNPINNING,
-              message: 'Tentativo di unpin da IPFS per pulizia...',
+              message: 'Unpinning file from IPFS relay for cleanup...',
             });
 
             const unpinResponse = await fetch(`${targetRelay}/api/v1/ipfs/pin/rm`, {
@@ -841,13 +841,13 @@ export class WormholeCore {
                 this.onStatusChange({
                   code,
                   status: WormholeStatus.UNPINNED,
-                  message: 'File rimosso da IPFS con successo.',
+                  message: 'File unpinned from IPFS successfully.',
                 });
               } else {
-                throw new Error(unpinResult.error || 'Unpin fallito sul relay.');
+                throw new Error(unpinResult.error || 'Unpin failed on relay.');
               }
             } else {
-              throw new Error(`Il relay ha risposto con errore ${unpinResponse.status}`);
+              throw new Error(`Relay responded with error ${unpinResponse.status}`);
             }
           } catch (e) {
             console.error('Unpin failed:', e);
@@ -855,7 +855,7 @@ export class WormholeCore {
               code,
               status: WormholeStatus.NOTICE,
               message:
-                'Cleanup non riuscito, il file verrà rimosso dal GC del nodo IPFS.',
+                'Cleanup failed; file will be removed by IPFS garbage collection.',
             });
           }
         }
@@ -864,7 +864,7 @@ export class WormholeCore {
 
       return code;
     } catch (error) {
-      console.error('Errore di upload:', error);
+      console.error('Upload error:', error);
       this.onStatusChange({
         code,
         status: WormholeStatus.ERROR,
@@ -885,7 +885,7 @@ export class WormholeCore {
         this.onStatusChange({
           code,
           status: WormholeStatus.COMPLETED,
-          message: 'File ricevuto con successo da Freenet!',
+          message: 'File successfully received from Freenet!',
           fileData: {
             blob,
             filename: fileData.filename,
@@ -927,7 +927,7 @@ export class WormholeCore {
     this.onStatusChange({
       code,
       status: WormholeStatus.CONNECTING,
-      message: `Ricerca del trasferimento: ${code}`,
+      message: `Locating transfer: ${code}`,
     });
 
     const onceWithTimeout = (gunNode, timeout = 35000) => {
@@ -941,7 +941,7 @@ export class WormholeCore {
             gunNode.off();
             reject(
               new Error(
-                `Timeout: Nessun dato ricevuto per il codice "${code}" dopo ${timeout / 1000}s. Controlla il codice e riprova.`
+                `Timeout: No transfer data found for sync code "${code}" after ${timeout / 1000}s. Please check code and try again.`
               )
             );
           }
@@ -980,7 +980,7 @@ export class WormholeCore {
           this.onStatusChange({
             code,
             status: WormholeStatus.ERROR,
-            message: 'Codice non valido o trasferimento non trovato.',
+            message: 'Invalid code or transfer not found.',
           });
           return;
         }
@@ -988,7 +988,7 @@ export class WormholeCore {
         this.onStatusChange({
           code,
           status: WormholeStatus.FOUND,
-          message: `Trasferimento trovato: ${metadata.filename} (${metadata.mode === 'p2p' ? 'P2P Direct' : 'IPFS Relay'})`,
+          message: `Transfer found: ${metadata.filename} (${metadata.mode === 'p2p' ? 'P2P Direct' : 'IPFS Relay'})`,
           metadata,
         });
 
@@ -997,7 +997,7 @@ export class WormholeCore {
           this.onStatusChange({
             code,
             status: WormholeStatus.ERROR,
-            message: 'Metadati di cifratura mancanti.',
+            message: 'Missing encryption metadata.',
           });
           return;
         }
@@ -1006,17 +1006,17 @@ export class WormholeCore {
         if (metadata.mode === 'p2p') {
           const PeerConnectionClass = globalThis.RTCPeerConnection;
           if (!PeerConnectionClass) {
-            throw new Error('WebRTC (RTCPeerConnection) non è supportato in questo ambiente.');
+            throw new Error('WebRTC (RTCPeerConnection) is not supported in this environment.');
           }
 
           if (!metadata.offer) {
-            throw new Error('Offerta WebRTC mancante nei metadati del trasferimento.');
+            throw new Error('Missing WebRTC offer in transfer metadata.');
           }
 
           this.onStatusChange({
             code,
             status: WormholeStatus.CONNECTING,
-            message: `Negoziazione WebRTC P2P con il mittente per ${metadata.filename}...`,
+            message: `Negotiating WebRTC P2P connection for ${metadata.filename}...`,
           });
 
           const pc = new PeerConnectionClass(RTC_CONFIG);
@@ -1059,7 +1059,7 @@ export class WormholeCore {
             this.onStatusChange({
               code,
               status: WormholeStatus.DECRYPTING,
-              message: 'Tutti i chunk WebRTC ricevuti. Decifratura del file in corso...',
+              message: 'All WebRTC chunks received. Decrypting file...',
             });
 
             try {
@@ -1083,7 +1083,7 @@ export class WormholeCore {
               this.onStatusChange({
                 code,
                 status: WormholeStatus.DOWNLOADED,
-                message: 'File scaricato e decifrato con successo via WebRTC!',
+                message: 'File downloaded & decrypted successfully via WebRTC!',
                 fileData: {
                   blob: finalBlob,
                   buffer: decryptedBuffer,
@@ -1110,7 +1110,7 @@ export class WormholeCore {
                 } catch (e) {}
               }, 1000);
             } catch (error) {
-              console.error('Errore decifratura P2P:', error);
+              console.error('P2P decryption error:', error);
               this.onStatusChange({
                 code,
                 status: WormholeStatus.ERROR,
@@ -1127,7 +1127,7 @@ export class WormholeCore {
               this.onStatusChange({
                 code,
                 status: WormholeStatus.STREAMING_P2P,
-                message: `Connessione WebRTC P2P attiva! Ricezione diretta di ${metadata.filename}...`,
+                message: `WebRTC P2P stream active! Receiving ${metadata.filename}...`,
               });
             };
 
@@ -1204,7 +1204,7 @@ export class WormholeCore {
         this.onStatusChange({
           code,
           status: WormholeStatus.DOWNLOADING,
-          message: `Download di ${metadata.filename} da IPFS in corso...`,
+          message: `Downloading ${metadata.filename} from IPFS...`,
         });
 
         try {
@@ -1217,7 +1217,7 @@ export class WormholeCore {
           const response = await fetch(`${effectiveRelayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
           if (!response.ok) {
             throw new Error(
-              `Impossibile scaricare dal gateway IPFS (status: ${response.status})`
+              `Unable to download from IPFS gateway (status: ${response.status})`
             );
           }
 
@@ -1239,7 +1239,7 @@ export class WormholeCore {
             this.onStatusChange({
               code,
               status: WormholeStatus.DECRYPTING,
-              message: 'Decifratura del file in corso...',
+              message: 'Decrypting file...',
             });
             decryptedBuffer = await decryptArrayBufferWithCode(
               downloadBuffer,
@@ -1259,7 +1259,7 @@ export class WormholeCore {
           this.onStatusChange({
             code,
             status: WormholeStatus.DOWNLOADED,
-            message: 'File scaricato con successo.',
+            message: 'File downloaded successfully.',
             fileData: {
               blob: finalBlob,
               buffer: decryptedBuffer,
@@ -1273,7 +1273,7 @@ export class WormholeCore {
             timestamp: Date.now(),
           });
         } catch (error) {
-          console.error('Errore di download IPFS:', error);
+          console.error('IPFS download error:', error);
           this.onStatusChange({
             code,
             status: WormholeStatus.ERROR,

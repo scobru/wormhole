@@ -457,7 +457,7 @@ export async function sendViaFreenet({
   onStatusChange({
     code,
     status: 'freenet-uploading-chunks',
-    message: `Cifratura e upload su Freenet (0/${numChunks} chunk)...`,
+    message: `Encrypting & uploading to Freenet (0/${numChunks} chunks)...`,
   });
 
   const chunkAddrs = [];
@@ -485,14 +485,14 @@ export async function sendViaFreenet({
     onStatusChange({
       code,
       status: 'freenet-uploading-chunks',
-      message: `Caricamento chunk Freenet: ${i + 1}/${numChunks} (${percent}%)`,
+      message: `Uploading Freenet chunk: ${i + 1}/${numChunks} (${percent}%)`,
     });
   }
 
   onStatusChange({
     code,
     status: 'freenet-publishing-manifest',
-    message: 'Pubblicazione manifest del trasferimento sul canale Freenet...',
+    message: 'Publishing transfer manifest to Freenet channel...',
   });
 
   const manifest = {
@@ -529,7 +529,7 @@ export async function sendViaFreenet({
   onStatusChange({
     code,
     status: 'sent',
-    message: 'File pronto e distribuito sulla rete Freenet!',
+    message: 'File encrypted & published to Freenet network!',
   });
 
   return { code, manifest, chunkAddrs };
@@ -546,7 +546,7 @@ export async function receiveViaFreenet(
   onStatusChange({
     code,
     status: 'freenet-resolving-manifest',
-    message: 'Ricerca manifest del file sulla rete Freenet...',
+    message: 'Resolving file manifest on Freenet...',
   });
 
   let channelState = await getChannel(code);
@@ -558,7 +558,7 @@ export async function receiveViaFreenet(
   }
 
   if (!channelState?.manifest) {
-    throw new Error(`Nessun file trovato su Freenet per il codice "${code}".`);
+    throw new Error(`No file found on Freenet for sync code "${code}".`);
   }
 
   const envelope = JSON.parse(channelState.manifest);
@@ -582,7 +582,7 @@ export async function receiveViaFreenet(
     );
     manifest = JSON.parse(new TextDecoder().decode(plainManifestBytes));
   } catch (e) {
-    throw new Error('Impossibile decifrare il manifest: codice errato o corrotto.');
+    throw new Error('Unable to decrypt manifest: invalid or corrupted sync code.');
   }
 
   const { filename, size, type, chunks, iv: baseIvB64 } = manifest;
@@ -592,7 +592,7 @@ export async function receiveViaFreenet(
   onStatusChange({
     code,
     status: 'freenet-downloading-chunks',
-    message: `Scaricamento e decifratura (0/${numChunks} chunk)...`,
+    message: `Downloading & decrypting (0/${numChunks} chunks)...`,
     fileInfo: { filename, size, type },
   });
 
@@ -622,14 +622,14 @@ export async function receiveViaFreenet(
     onStatusChange({
       code,
       status: 'freenet-downloading-chunks',
-      message: `Scaricamento da Freenet: ${i + 1}/${numChunks} (${percent}%)`,
+      message: `Downloading from Freenet: ${i + 1}/${numChunks} (${percent}%)`,
     });
   }
 
   onStatusChange({
     code,
     status: 'completed',
-    message: 'File scaricato e decifrato con successo da Freenet!',
+    message: 'File successfully downloaded and decrypted from Freenet!',
   });
 
   return {

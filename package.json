@@ -1,10 +1,15 @@
 {
-  "name": "wormhole",
+  "name": "freehole",
   "version": "1.1.0",
-  "description": "P2P file transfer tool using ZEN.",
+  "description": "P2P and Freenet sovereign file transfer tool using ZEN.",
   "type": "module",
   "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scobru/freehole.git"
+  },
   "bin": {
+    "freehole": "src/index.js",
     "wh": "src/index.js"
   },
   "scripts": {

@@ -6,7 +6,7 @@ A high-performance, decentralized sovereign file transfer tool for **Freenet** a
 
 ## 🚀 Overview & Architecture
 
-WORMHOLE uses a hybrid architecture designed for speed, privacy, and reliability:
+FREEHOLE uses a hybrid architecture designed for speed, privacy, and reliability:
 
 1. **⚡ Direct P2P Stream (WebRTC DataChannel)** *(Default Mode)*:
    - Inspired by **FilePizza**, files are streamed directly between peers using binary `RTCDataChannel` (64KB chunks).
@@ -51,13 +51,13 @@ The CLI binary is named **`wh`** to prevent name collisions with `magic-wormhole
 
 ```bash
 # Global installation from GitHub
-npm install -g git+https://github.com/scobru/wormhole.git
+npm install -g git+https://github.com/scobru/freehole.git
 
 # Or run instantly via npx (Zero install)
-npx github:scobru/wormhole send <file-path>
+npx github:scobru/freehole send <file-path>
 
 # Or from local clone:
-# git clone https://github.com/scobru/wormhole.git && cd wormhole && npm install && npm link
+# git clone https://github.com/scobru/freehole.git && cd freehole && npm install && npm link
 ```
 
 ### Commands
@@ -101,7 +101,7 @@ wh send document.pdf --ipfs -u https://my-relay.example.com -t my_secret_token
 
 ## 🌌 Freenet Integration: Sovereign dApp & Chunk Storage
 
-Wormhole features native integration with [Freenet](https://freenet.org), following the architectural patterns from [Orto](https://github.com/scobru/orto):
+FreeHole features native integration with [Freenet](https://freenet.org), following the architectural patterns from [Orto](https://github.com/scobru/orto):
 
 1. **Chunk Contracts (`contracts/chunk.wasm`)**:
    - Files are sliced into 256 KB chunks, each encrypted client-side using AES-GCM-256 with nonce position binding.
@@ -164,7 +164,7 @@ wormhole/
 
 ## ⚙️ Configuration & Companion Services
 
-WORMHOLE works out of the box with zero configuration, using preconfigured defaults:
+FREEHOLE works out of the box with zero configuration, using preconfigured defaults:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
