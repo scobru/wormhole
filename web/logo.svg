@@ -1,18 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <!-- Minimal Dark Monochrome Singularity Logo -->
+  <!-- Minimal Dark Monochrome FreeHole Singularity Logo -->
   <rect width="512" height="512" rx="112" fill="#09090b" />
   <rect width="504" height="504" x="4" y="4" rx="108" stroke="#27272a" stroke-width="8" />
 
   <!-- Concentric Precision Aperture Rings -->
   <circle cx="256" cy="256" r="176" stroke="#27272a" stroke-width="2" stroke-dasharray="6 6" />
   <circle cx="256" cy="256" r="128" stroke="#3f3f46" stroke-width="2" />
-  <circle cx="256" cy="256" r="80" stroke="#52525b" stroke-width="2" />
+  <circle cx="256" cy="256" r="80" stroke="#27272a" stroke-width="2" stroke-dasharray="4 4" />
 
-  <!-- Minimalist Wormhole "W" Vortex Bridge -->
-  <path d="M148 188 L194 326 C200 344 214 352 228 340 L256 306 L284 340 C298 352 312 344 318 326 L364 188"
-    stroke="#f4f4f5" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- FreeHole Geometric "F" Singularity Horizon -->
+  <path d="M 206 346 L 206 170 C 206 166 209 166 216 166 L 320 166"
+    stroke="#f4f4f5" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M 206 250 L 296 250"
+    stroke="#f4f4f5" stroke-width="20" stroke-linecap="round" />
 
-  <!-- Singularity Core -->
-  <circle cx="256" cy="256" r="16" fill="#09090b" stroke="#f4f4f5" stroke-width="6" />
-  <circle cx="256" cy="256" r="6" fill="#f4f4f5" />
+  <!-- Orbiting Singularity Horizon Core -->
+  <circle cx="316" cy="326" r="18" fill="#09090b" stroke="#f4f4f5" stroke-width="6" />
+  <circle cx="316" cy="326" r="7" fill="#f4f4f5" />
 </svg>

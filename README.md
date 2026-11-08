@@ -1,6 +1,6 @@
-# 🌌 WORMHOLE
+# 🌀 FREEHOLE
 
-A high-performance, decentralized P2P and IPFS file transfer tool using **ZEN** and **WebRTC**. WORMHOLE provides end-to-end encrypted file sharing through both a fast CLI interface (`wh`) and a modern web dashboard.
+A high-performance, decentralized sovereign file transfer tool for **Freenet** and **WebRTC/IPFS** using **ZEN**. FREEHOLE provides zero-knowledge, end-to-end encrypted, asynchronous file sharing on Freenet and real-time P2P through both a fast CLI interface (`wh`) and a modern web dashboard.
 
 ---
 

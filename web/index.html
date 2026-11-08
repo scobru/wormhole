@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wormhole — Decentralized P2P File Transfer</title>
+  <title>FreeHole — Decentralized Sovereign File Transfer</title>
   <meta name="description"
-    content="High-performance decentralized sovereign file transfer with zero-knowledge end-to-end encryption." />
+    content="High-performance decentralized sovereign file transfer with zero-knowledge end-to-end encryption on Freenet and Web." />
   <link rel="icon" type="image/svg+xml" href="./logo.svg" />
 </head>
 
@@ -17,11 +17,11 @@
       <!-- Brand / Logo -->
       <a href="#transfer" data-view-target="transfer" class="flex items-center gap-2.5 select-none cursor-pointer">
         <div class="flex items-center justify-center p-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
-          <img src="./logo.svg" alt="Wormhole Logo" class="h-5 w-5" />
+          <img src="./logo.svg" alt="FreeHole Logo" class="h-5 w-5" />
         </div>
         <div class="flex items-center gap-2">
           <span class="font-semibold text-sm tracking-tight text-zinc-100">
-            Wormhole
+            FreeHole
           </span>
           <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
             v1.1.0
@@ -81,15 +81,15 @@
         <div class="flex flex-col items-center">
           <!-- Logo Icon -->
           <div class="mb-3 p-2 rounded-xl bg-zinc-900 border border-zinc-800">
-            <img src="./logo.svg" alt="Wormhole Logo" class="h-8 w-8" />
+            <img src="./logo.svg" alt="FreeHole Logo" class="h-8 w-8" />
           </div>
 
           <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100 mb-1.5 text-center">
-            Wormhole
+            FreeHole
           </h1>
           <p class="text-xs text-zinc-400 mb-6 text-center flex items-center justify-center flex-wrap gap-2">
             <span data-env-show="web">Decentralized P2P File Transfer</span>
-            <span data-env-show="freenet" class="hidden">Decentralized Sovereign Transfer</span>
+            <span data-env-show="freenet" class="hidden">Asynchronous Sovereign Transfer</span>
             <span class="inline-block w-1 h-1 rounded-full bg-zinc-700"></span>
             <span class="text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">E2EE</span>
             <span class="inline-block w-1 h-1 rounded-full bg-zinc-700"></span>
@@ -239,24 +239,76 @@
 
             <!-- Code Display Section -->
             <div id="code-section" class="w-full hidden space-y-3">
+              <!-- Mode status badge -->
+              <div class="flex justify-center">
+                <span id="transfer-badge-freenet"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-950/60 text-emerald-400 border-emerald-800/60">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  Stored on Freenet &bull; Asynchronous
+                </span>
+                <span id="transfer-badge-webrtc"
+                  class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-zinc-900 text-zinc-300 border-zinc-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse"></span>
+                  Direct P2P Stream &bull; Keep Window Open
+                </span>
+                <span id="transfer-badge-ipfs"
+                  class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-950/60 text-emerald-400 border-emerald-800/60">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  Stored on IPFS Relay &bull; Asynchronous
+                </span>
+              </div>
+
               <div class="code-display-box flex flex-col items-center justify-center text-center">
                 <span class="text-[10px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">Mnemonic Sync
                   Code</span>
                 <code id="transfer-code" class="code-font select-all py-1"></code>
               </div>
 
-              <p class="text-xs text-zinc-400 text-center px-4 leading-relaxed">
-                Share this sync code with the recipient. The transfer begins automatically once entered.
-              </p>
+              <!-- Informational note (dynamic based on mode) -->
+              <div id="code-instruction-freenet"
+                class="rounded-lg bg-zinc-900/70 border border-zinc-800/80 p-3 text-center space-y-1">
+                <p class="text-xs text-zinc-200 font-medium">
+                  File uploaded &amp; distributed on Freenet
+                </p>
+                <p class="text-[11px] text-zinc-400 leading-relaxed">
+                  The encrypted chunks are live on the decentralized network. <strong>You can safely close this window</strong> &mdash; the recipient can retrieve the file at any time using this sync code.
+                </p>
+              </div>
 
-              <button type="button" class="btn btn-wormhole w-full py-2.5 h-auto text-sm gap-2" data-action="copy-code">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                <span>Copy Sync Code</span>
-              </button>
+              <div id="code-instruction-webrtc"
+                class="hidden rounded-lg bg-zinc-900/70 border border-zinc-800/80 p-3 text-center space-y-1">
+                <p class="text-xs text-zinc-200 font-medium">
+                  Waiting for peer connection
+                </p>
+                <p class="text-[11px] text-zinc-400 leading-relaxed">
+                  <strong>Please keep this window open.</strong> Direct WebRTC streaming will start as soon as the recipient inputs this sync code.
+                </p>
+              </div>
+
+              <div id="code-instruction-ipfs"
+                class="hidden rounded-lg bg-zinc-900/70 border border-zinc-800/80 p-3 text-center space-y-1">
+                <p class="text-xs text-zinc-200 font-medium">
+                  File uploaded to IPFS Relay
+                </p>
+                <p class="text-[11px] text-zinc-400 leading-relaxed">
+                  Your encrypted file is staged on the relay. <strong>You can safely close this window</strong> &mdash; the recipient can download it at any time.
+                </p>
+              </div>
+
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-wormhole flex-1 py-2.5 h-auto text-sm gap-2" data-action="copy-code">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>Copy Sync Code</span>
+                </button>
+                <button type="button" id="btn-new-transfer"
+                  class="btn btn-outline border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600 py-2.5 h-auto text-sm px-4">
+                  Send Another
+                </button>
+              </div>
             </div>
 
             <div id="send-status" class="mt-2" aria-live="polite"></div>
@@ -337,7 +389,7 @@
             Decentralized P2P File Transfer
           </h2>
           <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-            Wormhole enables wire-speed, end-to-end encrypted file sharing directly between peers using
+            FreeHole enables wire-speed, end-to-end encrypted file sharing directly between peers using
             <strong>WebRTC DataChannels</strong> and decentralized <strong>IPFS Relays</strong>.
           </p>
         </div>
@@ -452,7 +504,7 @@
         <!-- Lifecycle Workflow Diagram (Web) -->
         <div class="wormhole-card p-6 space-y-4">
           <h3 class="text-sm font-semibold text-zinc-100">
-            How Wormhole P2P Works
+            How FreeHole P2P Works
           </h3>
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
             <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
@@ -491,7 +543,7 @@
             Decentralized Sovereign File Transfer
           </h2>
           <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-            Wormhole enables fast, end-to-end encrypted file sharing using
+            FreeHole enables fast, end-to-end encrypted file sharing using
             <strong>Freenet WASM Contracts</strong>, content-addressed <strong>Blake3 Chunks</strong>, and sovereign storage.
           </p>
         </div>
@@ -606,7 +658,7 @@
         <!-- Lifecycle Workflow Diagram (Freenet) -->
         <div class="wormhole-card p-6 space-y-4">
           <h3 class="text-sm font-semibold text-zinc-100">
-            How Wormhole Works on Freenet
+            How FreeHole Works on Freenet
           </h3>
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
             <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
@@ -657,7 +709,7 @@
             Command Line Interface
           </div>
           <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
-            Wormhole CLI (<code class="font-mono text-zinc-200">wh</code>)
+            FreeHole CLI (<code class="font-mono text-zinc-200">wh</code>)
           </h2>
           <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
             The CLI binary is named <strong><code class="text-zinc-200 font-mono">wh</code></strong> to avoid
@@ -839,7 +891,7 @@
             Command Line Interface
           </div>
           <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
-            Wormhole CLI (<code class="font-mono text-zinc-200">wh</code>) on Freenet
+            FreeHole CLI (<code class="font-mono text-zinc-200">wh</code>) on Freenet
           </h2>
           <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
             The CLI binary communicates directly with your local Freenet node on port 7509, using the exact same Blake3 chunking and channel contracts as this Web App.
@@ -964,10 +1016,10 @@
     class="w-full py-6 px-4 text-center text-xs text-zinc-500 mt-auto border-t border-zinc-800/80 bg-zinc-950/60">
     <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-2">
-        <span class="font-medium text-zinc-300">Wormhole</span>
+        <span class="font-medium text-zinc-300">FreeHole</span>
         <span class="text-zinc-700">&bull;</span>
         <span data-env-show="web">Decentralized P2P &amp; IPFS Transfer</span>
-        <span data-env-show="freenet" class="hidden">Decentralized Sovereign Transfer on Freenet</span>
+        <span data-env-show="freenet" class="hidden">Asynchronous Sovereign Transfer on Freenet</span>
       </div>
 
       <div class="flex flex-wrap justify-center items-center gap-4">

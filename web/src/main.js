@@ -172,6 +172,10 @@ function wireEventListeners() {
     void copyCode();
   });
 
+  document.getElementById('btn-new-transfer')?.addEventListener('click', () => {
+    resetUI();
+  });
+
   elements.receiveButton.addEventListener('click', () => {
     void connectToSender();
   });
@@ -397,6 +401,33 @@ async function sendFile() {
     elements.transferCodeDisplay.textContent = transferCode;
     elements.codeSection.classList.remove('hidden');
     elements.fileInfoSection.classList.add('hidden');
+
+    // Dynamic mode-specific badge and instructions
+    const isFn = isFreenet;
+    const isIpfs = selectedMode === 'ipfs';
+    const isP2p = selectedMode === 'p2p';
+
+    const badgeFreenet = document.getElementById('transfer-badge-freenet');
+    const badgeWebRtc = document.getElementById('transfer-badge-webrtc');
+    const badgeIpfs = document.getElementById('transfer-badge-ipfs');
+    const instrFreenet = document.getElementById('code-instruction-freenet');
+    const instrWebRtc = document.getElementById('code-instruction-webrtc');
+    const instrIpfs = document.getElementById('code-instruction-ipfs');
+
+    if (badgeFreenet) badgeFreenet.classList.toggle('hidden', !isFn);
+    if (badgeWebRtc) badgeWebRtc.classList.toggle('hidden', isFn || !isP2p);
+    if (badgeIpfs) badgeIpfs.classList.toggle('hidden', isFn || !isIpfs);
+
+    if (instrFreenet) instrFreenet.classList.toggle('hidden', !isFn);
+    if (instrWebRtc) instrWebRtc.classList.toggle('hidden', isFn || !isP2p);
+    if (instrIpfs) instrIpfs.classList.toggle('hidden', isFn || !isIpfs);
+
+    // On Freenet and IPFS, the upload to the network is 100% complete.
+    // The sender's browser does not need to stay open.
+    if (isFn || isIpfs) {
+      state.transferInProgress = false;
+      setButtonLoading(elements.sendButton, false);
+    }
   } catch (error) {
     console.error(error);
     showStatus('send', 'error', `Upload fallito: ${error.message ?? 'Errore sconosciuto'}`);
@@ -470,7 +501,13 @@ function handleStatusChange({ status, message, metadata, fileData }) {
       showStatus('receive', 'info', message);
       break;
     case WormholeStatus.SENT:
-      showStatus('send', 'success', message);
+      showStatus(
+        'send',
+        'success',
+        isFreenetEnvironment()
+          ? 'File cifrato e pubblicato su Freenet! Puoi chiudere la finestra in sicurezza.'
+          : message
+      );
       break;
     case WormholeStatus.COMPLETED:
       if (fileData?.blob) {
@@ -820,7 +857,7 @@ function applyEnvironmentMode() {
     if (fnBanner) {
       fnBanner.classList.remove('hidden');
     }
-    document.title = 'Wormhole — Decentralized Sovereign File Transfer on Freenet';
+    document.title = 'FreeHole — Asynchronous Sovereign File Transfer on Freenet';
   } else {
     if (badge) {
       badge.textContent = 'WebRTC & IPFS';
@@ -835,7 +872,7 @@ function applyEnvironmentMode() {
     if (fnBanner) {
       fnBanner.classList.add('hidden');
     }
-    document.title = 'Wormhole — Decentralized P2P & IPFS File Transfer';
+    document.title = 'FreeHole — Decentralized P2P & IPFS File Transfer';
   }
 }
 
