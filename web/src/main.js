@@ -201,7 +201,7 @@ function wireEventListeners() {
         btn.innerHTML = `<div class="truncate"><span class="font-semibold text-sm">${track.title}</span><br/><span class="text-xs text-zinc-400">${track.artist}</span></div>`;
         btn.onclick = async () => {
           elements.labModal.close();
-          showStatus('send', 'info', `Scaricamento traccia: ${track.title}...`);
+          showStatus('send', 'info', `Downloading track: ${track.title}...`);
           try {
             const response = await fetch(track.streamUrl);
             const blob = await response.blob();
@@ -290,7 +290,7 @@ async function copyCode() {
     }, 2000);
   } catch (error) {
     console.error(error);
-    showStatus('send', 'error', 'Impossibile copiare il codice automaticamente.');
+    showStatus('send', 'error', 'Failed to copy sync code automatically.');
   }
 }
 

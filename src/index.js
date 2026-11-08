@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * WORMHOLE CLI
- * Trasferimento file P2P da terminale
+ * FREEHOLE CLI
+ * Sovereign decentralized file transfer from terminal
  *
  * Usage:
- *   wh send <file>           # Invia un file
- *   wh receive <code>        # Ricevi un file
- *   wh list                  # Lista trasferimenti attivi
+ *   freehole send <file>           # Send a file
+ *   freehole receive <code>        # Receive a file
+ *   freehole list                  # List active transfers
  */
 
 import chalk from 'chalk';
@@ -177,18 +177,18 @@ class WormholeCLI {
           this.saveFile(fileData, this.spinner);
         } else {
           if (this.spinner.isSpinning) {
-            this.spinner.succeed(message || 'Trasferimento completato con successo!');
+            this.spinner.succeed(message || 'Transfer completed successfully!');
           }
-          console.log(chalk.gray('👋 Arrivederci!\n'));
+          console.log(chalk.gray('👋 Goodbye!\n'));
           setTimeout(() => process.exit(0), 500);
         }
         break;
 
       case WormholeStatus.ERROR:
         if (this.spinner.isSpinning) {
-          this.spinner.fail(`Errore: ${message}`);
+          this.spinner.fail(`Error: ${message}`);
         } else {
-          console.log(chalk.red(`❌ Errore: ${message}`));
+          console.log(chalk.red(`❌ Error: ${message}`));
         }
         process.exit(1);
         break;
@@ -196,7 +196,7 @@ class WormholeCLI {
       case WormholeStatus.FOUND: {
         const sizeInfo = metadata?.size ? ` (${filesize(metadata.size)})` : '';
         const modeInfo = metadata?.mode === 'p2p' ? 'P2P Direct' : 'IPFS Relay';
-        this.spinner.succeed(`Trasferimento trovato: ${metadata.filename || 'File'}${sizeInfo} [${modeInfo}]`);
+        this.spinner.succeed(`Transfer found: ${metadata.filename || 'File'}${sizeInfo} [${modeInfo}]`);
         break;
       }
 
@@ -221,14 +221,14 @@ class WormholeCLI {
       const loadedStr = loaded ? filesize(loaded) : '';
       const totalStr = total ? filesize(total) : '';
       const sizeStr = loadedStr && totalStr ? ` (${loadedStr} / ${totalStr})` : '';
-      this.spinner.text = `Trasferimento in corso... ${progress}%${sizeStr}`;
+      this.spinner.text = `Transfer in progress... ${progress}%${sizeStr}`;
     }
   }
 
-  // Invia file
+  // Send file
   async sendFile(filePath, mode = 'p2p', options = {}) {
     if (!fs.existsSync(filePath)) {
-      console.log(chalk.red('❌ File non trovato:', filePath));
+      console.log(chalk.red('❌ File not found:', filePath));
       return;
     }
 
@@ -238,7 +238,7 @@ class WormholeCLI {
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
 
-    this.spinner.start('🚀 Preparazione e cifratura file...');
+    this.spinner.start('🚀 Preparing and encrypting file...');
 
     try {
       const fileBuffer = fs.readFileSync(filePath);
@@ -269,41 +269,41 @@ class WormholeCLI {
         mode === 'freenet'
           ? 'Freenet Decentralized Storage (Chunk Contracts)'
           : mode === 'p2p'
-            ? 'P2P Diretto (WebRTC)'
+            ? 'Direct P2P (WebRTC)'
             : 'IPFS Relay';
 
       console.log('');
-      console.log(chalk.bold.cyan('🌌 WORMHOLE FILE TRANSFER'));
+      console.log(chalk.bold.cyan('🌌 FREEHOLE FILE TRANSFER'));
       console.log(chalk.gray(`📁 File: ${fileName} (${filesize(stats.size)})`));
-      console.log(chalk.gray(`⚡ Modalità: ${modeLabel}`));
+      console.log(chalk.gray(`⚡ Mode: ${modeLabel}`));
 
-      console.log('\n' + chalk.green.bold('🎯 Condividi questo codice:'));
+      console.log('\n' + chalk.green.bold('🎯 Share this sync code:'));
       console.log(chalk.black.bgWhite.bold(` ${code} `));
       if (copied) {
-        console.log(chalk.green('📋 Codice copiato negli appunti!'));
+        console.log(chalk.green('📋 Code copied to clipboard!'));
       }
 
-      console.log('\n' + chalk.gray('Comando per il ricevente:'));
-      console.log(chalk.cyan(`wh receive ${code}${mode === 'freenet' ? ' --freenet' : ''}`));
+      console.log('\n' + chalk.gray('Receiver command:'));
+      console.log(chalk.cyan(`freehole receive ${code}${mode === 'freenet' ? ' --freenet' : ''}`));
 
       console.log(
         chalk.yellow(
-          '\n🔒 Questo codice è anche la chiave di decrittazione end-to-end. Mantienilo segreto.'
+          '\n🔒 This sync code is also the end-to-end decryption key. Keep it secret.'
         )
       );
 
       if (mode === 'freenet') {
         console.log(
           chalk.green(
-            '\n✨ File memorizzato sulla rete decentralizzata Freenet!'
+            '\n✨ File stored on the decentralized Freenet network!'
           )
         );
         console.log(
           chalk.gray(
-            '💡 Il ricevente può scaricare il file in qualsiasi momento con il codice.'
+            '💡 The recipient can download the file at any time using this sync code.'
           )
         );
-        console.log(chalk.gray('👋 Puoi chiudere questo terminale.\n'));
+        console.log(chalk.gray('👋 You can safely close this terminal.\n'));
         setTimeout(() => process.exit(0), 1000);
         return;
       }
@@ -311,26 +311,26 @@ class WormholeCLI {
       if (mode === 'p2p') {
         console.log(
           chalk.bold.red(
-            '\n⚠️  NON chiudere questo terminale fino al completamento del trasferimento!'
+            '\n⚠️  Do NOT close this terminal until the transfer is complete!'
           )
         );
       }
 
       console.log('');
-      this.spinner.start(chalk.yellow('⏳ In attesa che il ricevente si connetta e scarichi il file...'));
+      this.spinner.start(chalk.yellow('⏳ Waiting for recipient to connect and download...'));
 
-      // Annuncia il trasferimento sulla rete locale via multicast
+      // Announce transfer on local network via multicast
       this.announceTransfer(code, fileName, stats.size);
 
       // Keep CLI process alive
       setInterval(() => {}, 1000);
     } catch (error) {
-      this.spinner.fail(`❌ Upload fallito: ${error.message}`);
+      this.spinner.fail(`❌ Upload failed: ${error.message}`);
       process.exit(1);
     }
   }
 
-  // Annuncia trasferimento sulla rete locale via multicast
+  // Announce transfer on local network via multicast
   announceTransfer(code, filename, size) {
     try {
       const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
@@ -363,25 +363,25 @@ class WormholeCLI {
     }
   }
 
-  // Ricevi file
+  // Receive file
   async receiveFile(code, options = {}) {
     const relayUrl = options.relayUrl || this.relayUrl;
     const mode = options.mode || 'auto';
-    this.spinner.start(`Ricerca del trasferimento per: ${code}...`);
+    this.spinner.start(`Searching transfer for: ${code}...`);
 
     if (mode !== 'freenet') {
-      // 1. Inizia ascolto Multicast locale per scoperta immediata
+      // 1. Begin local multicast listening for instant discovery
       this.listenForMulticastTransfer(code);
     }
 
-    // 2. Inizia ricezione via Freenet o Zen/IPFS
+    // 2. Begin receiving via Freenet or Zen/IPFS
     this.wormhole.receive(code, relayUrl, mode);
 
     // Keep CLI process alive
     setInterval(() => {}, 1000);
   }
 
-  // Ascolta messaggi multicast per scoprire trasferimenti locali
+  // Listen for multicast messages to discover local transfers
   listenForMulticastTransfer(targetCode) {
     try {
       const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
@@ -409,7 +409,7 @@ class WormholeCLI {
         }
       });
 
-      // Chiudi il socket dopo 30 secondi se non è stato trovato nulla
+      // Close socket after 30 seconds if nothing was found
       setTimeout(() => {
         try {
           socket.close();
@@ -418,7 +418,7 @@ class WormholeCLI {
         }
       }, 30000);
     } catch (error) {
-      // Ignora errori multicast
+      // Ignore multicast errors
     }
   }
 
@@ -444,12 +444,12 @@ class WormholeCLI {
 
       fs.writeFileSync(outputPath, buffer);
 
-      spinner.succeed(`✅ File salvato: ${outputPath}`);
-      console.log(chalk.green(`📁 Dimensione: ${filesize(buffer.length)}`));
-      console.log(chalk.gray('👋 Arrivederci!\n'));
+      spinner.succeed(`✅ File saved: ${outputPath}`);
+      console.log(chalk.green(`📁 Size: ${filesize(buffer.length)}`));
+      console.log(chalk.gray('👋 Goodbye!\n'));
       setTimeout(() => process.exit(0), 500);
     } catch (error) {
-      spinner.fail('❌ Errore nel salvataggio');
+      spinner.fail('❌ Error saving file');
       console.error(chalk.red(error.message));
       process.exit(1);
     }
@@ -472,8 +472,8 @@ class WormholeCLI {
   }
 
   async listTransfers() {
-    console.log(chalk.blue('📋 Trasferimenti attivi:'));
-    console.log(chalk.gray('(Funzionalità in sviluppo)'));
+    console.log(chalk.blue('📋 Active transfers:'));
+    console.log(chalk.gray('(Feature under development)'));
   }
 }
 
@@ -510,18 +510,18 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
-    console.log(chalk.blue('🌌 WORMHOLE CLI'));
-    console.log(chalk.gray('Trasferimento file P2P, IPFS & Freenet sicuro\n'));
+    console.log(chalk.blue('🌌 FREEHOLE CLI'));
+    console.log(chalk.gray('Secure P2P, IPFS & Freenet sovereign file transfer\n'));
     console.log('Usage:');
-    console.log('  wh send <file> [options]     # Invia un file');
-    console.log('  wh receive <code> [options]  # Ricevi un file');
-    console.log('  wh list                      # Lista trasferimenti\n');
-    console.log('Opzioni invio/ricezione:');
-    console.log('  --freenet, --fn              Invia o ricevi tramite rete decentralizzata Freenet');
-    console.log('  --p2p                        Invia tramite P2P diretto WebRTC (default)');
-    console.log('  --ipfs, --relay              Invia tramite relay IPFS invece di P2P diretto');
-    console.log('  -u, --url <url>              Specifica URL del relay IPFS (default: da .env o https://delay.scobrudot.dev)');
-    console.log('  -t, --token <token>          Specifica Bearer token del relay IPFS (default: da .env o shogun2025)');
+    console.log('  freehole send <file> [options]     # Send a file');
+    console.log('  freehole receive <code> [options]  # Receive a file');
+    console.log('  freehole list                      # List transfers\n');
+    console.log('Transfer options:');
+    console.log('  --freenet, --fn              Send or receive via decentralized Freenet network');
+    console.log('  --p2p                        Send via direct WebRTC P2P (default)');
+    console.log('  --ipfs, --relay              Send via IPFS relay instead of direct P2P');
+    console.log('  -u, --url <url>              Specify IPFS relay URL (default: from .env or https://delay.scobrudot.dev)');
+    console.log('  -t, --token <token>          Specify IPFS relay Bearer token (default: from .env or shogun2025)');
     return;
   }
 
@@ -539,7 +539,7 @@ async function main() {
     case 'send': {
       const file = flags.positional[0];
       if (!file) {
-        console.log(chalk.red('❌ Specifica il file da inviare'));
+        console.log(chalk.red('❌ Please specify the file to send'));
         return;
       }
       await cli.sendFile(file, flags.mode, { relayUrl: flags.url, authToken: flags.token });
@@ -549,7 +549,7 @@ async function main() {
     case 'receive': {
       const code = flags.positional[0];
       if (!code) {
-        console.log(chalk.red('❌ Specifica il codice di ricezione'));
+        console.log(chalk.red('❌ Please specify the sync code to receive'));
         return;
       }
       await cli.receiveFile(code, { relayUrl: flags.url, mode: flags.mode });
@@ -561,18 +561,18 @@ async function main() {
       break;
 
     default:
-      console.log(chalk.red(`❌ Comando sconosciuto: ${command}`));
+      console.log(chalk.red(`❌ Unknown command: ${command}`));
   }
 }
 
-// Gestione errori
+// Error handling
 process.on('unhandledRejection', (error) => {
-  console.error('💥 Errore:', error.message);
+  console.error('💥 Error:', error.message);
   process.exit(1);
 });
 
 process.on('SIGINT', () => {
-  console.log(chalk.yellow('\n👋 Arrivederci!'));
+  console.log(chalk.yellow('\n👋 Goodbye!'));
   process.exit(0);
 });
 

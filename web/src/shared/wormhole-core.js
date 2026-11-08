@@ -301,7 +301,7 @@ async function decryptArrayBufferWithCode(encryptedBuffer, code, metadata) {
       encryptedBuffer
     );
   } catch (error) {
-    throw new Error('Impossibile decifrare il file. Verifica il codice inserito e riprova.');
+    throw new Error('Failed to decrypt file. Please verify the sync code and try again.');
   }
 }
 
