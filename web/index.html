@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wormhole — Decentralized Sovereign File Transfer on Freenet</title>
+  <title>Wormhole — Decentralized P2P File Transfer</title>
   <meta name="description"
-    content="High-performance decentralized sovereign file transfer with zero-knowledge end-to-end encryption on Freenet." />
+    content="High-performance decentralized sovereign file transfer with zero-knowledge end-to-end encryption." />
   <link rel="icon" type="image/svg+xml" href="./logo.svg" />
 </head>
 
@@ -88,13 +88,13 @@
             Wormhole
           </h1>
           <p class="text-xs text-zinc-400 mb-6 text-center flex items-center justify-center flex-wrap gap-2">
-            <span>Decentralized Sovereign Transfer</span>
+            <span data-env-show="web">Decentralized P2P File Transfer</span>
+            <span data-env-show="freenet" class="hidden">Decentralized Sovereign Transfer</span>
             <span class="inline-block w-1 h-1 rounded-full bg-zinc-700"></span>
             <span class="text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">E2EE</span>
             <span class="inline-block w-1 h-1 rounded-full bg-zinc-700"></span>
             <span id="protocol-badge"
-              class="text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">Freenet
-              Native</span>
+              class="text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">WebRTC &amp; IPFS</span>
           </p>
 
           <!-- Mode Switcher Tabs (Send / Receive) -->
@@ -182,18 +182,17 @@
 
               <!-- Transfer Mode Selector -->
               <div id="routing-mode-section" class="space-y-2">
-                <div class="text-[11px] font-medium uppercase tracking-wider text-zinc-400 px-0.5">Routing Mode</div>
+                <div class="text-[11px] font-medium uppercase tracking-wider text-zinc-400 px-0.5" data-env-show="web">Routing Mode</div>
                 
-                <!-- Multi-mode selector (Used when outside Freenet sandbox) -->
+                <!-- Multi-mode selector (Used on Vercel / Web: only WebRTC & IPFS) -->
                 <div id="routing-mode-selector" class="flex flex-col sm:flex-row gap-2">
                   <label class="mode-card cursor-pointer" id="label-mode-p2p">
-                    <input type="radio" name="transfer-mode" value="p2p" id="mode-p2p"
+                    <input type="radio" name="transfer-mode" value="p2p" id="mode-p2p" checked
                       class="radio radio-xs text-zinc-100 border-zinc-600" />
                     <div class="flex flex-col">
                       <div class="flex items-center gap-1.5">
                         <span class="font-medium text-xs text-zinc-200">Direct P2P</span>
-                        <span
-                          class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 font-mono">WebRTC</span>
+                        <span class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 font-mono">WebRTC</span>
                       </div>
                       <span class="text-[10px] text-zinc-500 mt-0.5">Direct peer streaming</span>
                     </div>
@@ -204,24 +203,13 @@
                     <div class="flex flex-col">
                       <div class="flex items-center gap-1.5">
                         <span class="font-medium text-xs text-zinc-200">IPFS Relay</span>
-                        <span
-                          class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 font-mono">Async</span>
+                        <span class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 font-mono">Async</span>
                       </div>
                       <span class="text-[10px] text-zinc-500 mt-0.5">Staging relay node</span>
                     </div>
                   </label>
-                  <label class="mode-card cursor-pointer" id="label-mode-freenet">
-                    <input type="radio" name="transfer-mode" value="freenet" id="mode-freenet" checked
-                      class="radio radio-xs text-zinc-100 border-zinc-600" />
-                    <div class="flex flex-col">
-                      <div class="flex items-center gap-1.5">
-                        <span class="font-medium text-xs text-zinc-200">Freenet</span>
-                        <span
-                          class="text-[9px] px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 font-mono">Chunks</span>
-                      </div>
-                      <span class="text-[10px] text-zinc-500 mt-0.5">Sovereign P2P storage</span>
-                    </div>
-                  </label>
+                  <!-- Hidden radio input for Freenet mode (only activated in Freenet environment) -->
+                  <input type="radio" name="transfer-mode" value="freenet" id="mode-freenet" class="hidden" />
                 </div>
 
                 <!-- Dedicated Freenet Banner (Active inside Freenet Container) -->
@@ -238,7 +226,7 @@
                         <span
                           class="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-emerald-400 font-mono border border-zinc-700/60 font-medium">NATIVE</span>
                       </div>
-                      <span class="text-[10px] text-zinc-500 mt-0.5">128KB Blake3 Chunks &bull; End-to-End Encrypted &bull; Decentralized</span>
+                      <span class="text-[10px] text-zinc-500 mt-0.5">128KB Blake3 Chunks &bull; End-to-End Encrypted &bull; Sovereign P2P</span>
                     </div>
                   </div>
                 </div>
@@ -336,153 +324,311 @@
 
     <!-- ================= VIEW 2: ABOUT & ARCHITECTURE ================= -->
     <div id="view-about" class="view-panel w-full hidden space-y-8 max-w-4xl py-4">
-      <!-- Hero Banner -->
-      <div class="text-center space-y-2">
-        <div
-          class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono uppercase tracking-wider">
-          Zero-Knowledge Architecture
+      
+      <!-- === ABOUT CONTENT: WEB / VERCEL (Default: WebRTC & IPFS) === -->
+      <div data-env-show="web" class="space-y-8">
+        <!-- Hero Banner -->
+        <div class="text-center space-y-2">
+          <div
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono uppercase tracking-wider">
+            Zero-Knowledge Architecture
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
+            Decentralized P2P File Transfer
+          </h2>
+          <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
+            Wormhole enables wire-speed, end-to-end encrypted file sharing directly between peers using
+            <strong>WebRTC DataChannels</strong> and decentralized <strong>IPFS Relays</strong>.
+          </p>
         </div>
-        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
-          Decentralized Sovereign File Transfer
-        </h2>
-        <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-          Wormhole enables fast, end-to-end encrypted file sharing using
-          <strong>Freenet WASM Contracts</strong>, content-addressed <strong>Blake3 Chunks</strong>, and decentralized storage.
-        </p>
+
+        <!-- 4 Architectural Pillars Grid (Web) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Pillar 1: Direct P2P Streaming -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>Direct P2P Streaming</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">WebRTC</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Files stream directly from sender to receiver via encrypted <strong>WebRTC DataChannels</strong> without intermediaries or central servers.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Direct Peer-to-Peer</strong>: Maximum transfer speed bounded only by peer connections.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>No Cloud Storage</strong>: Data flows memory-to-memory between browsers.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pillar 2: IPFS Relay -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>IPFS Decentralized Relay</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Async</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Staging relay support for asynchronous transfers and difficult NAT / firewall traversal using decentralized IPFS pinning.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Asynchronous Pickup</strong>: Receiver does not need to be online at the exact same second.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Zero Plaintext Storage</strong>: Only AES-256 encrypted ciphertext blocks are relayed.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pillar 3: Web & CLI Interoperability -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>Universal Interoperability</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Web &amp; CLI</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Seamless cross-platform file transfers: send files from terminal CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">wh send &lt;file&gt;</code> and receive inside this web app.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Cross-Platform</strong>: Terminal-to-Browser, Browser-to-Terminal, or Browser-to-Browser.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Lightweight Core</strong>: Pure WebRTC &amp; decentralized rendezvous protocols.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pillar 4: E2EE -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>End-to-End Encryption</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">AES-GCM</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              All files are encrypted client-side using <strong>AES-GCM (256-bit)</strong> with PBKDF2 key derivation and chunk-index binding.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Zero-Knowledge Mnemonic</strong>: The code is both the rendezvous address and the secret key.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Confidentiality</strong>: Relays and signaling peers never inspect plaintext or metadata.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Lifecycle Workflow Diagram (Web) -->
+        <div class="wormhole-card p-6 space-y-4">
+          <h3 class="text-sm font-semibold text-zinc-100">
+            How Wormhole P2P Works
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">01</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Local Encryption</h4>
+              <p class="text-[11px] text-zinc-400">Sender generates mnemonic code and encrypts file via AES-256-GCM in the browser or terminal.</p>
+            </div>
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">02</span>
+              <h4 class="text-xs font-semibold text-zinc-200">P2P Signaling</h4>
+              <p class="text-[11px] text-zinc-400">Peers exchange WebRTC handshake offers via decentralized zero-knowledge rendezvous.</p>
+            </div>
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">03</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Direct Stream</h4>
+              <p class="text-[11px] text-zinc-400">Encrypted binary chunks stream directly between connected peers over WebRTC DataChannels.</p>
+            </div>
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">04</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Local Decryption</h4>
+              <p class="text-[11px] text-zinc-400">Receiver decrypts chunks in-memory using derived AES-256 key and triggers file download.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- 4 Architectural Pillars Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Pillar 1: Freenet Sovereign Storage -->
-        <div class="arch-card">
-          <div class="arch-card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
+      <!-- === ABOUT CONTENT: FREENET CONTAINER (Active only inside Freenet) === -->
+      <div data-env-show="freenet" class="hidden space-y-8">
+        <!-- Hero Banner (Freenet) -->
+        <div class="text-center space-y-2">
+          <div
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono uppercase tracking-wider">
+            Zero-Knowledge Architecture
           </div>
-          <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
-            <span>Freenet Sovereign Storage</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Default</span>
-          </h3>
-          <p class="text-xs text-zinc-400 leading-relaxed">
-            Files are sliced into verifiable 128KB chunks, addressed by cryptographic <strong>Blake3 hashes</strong>, and stored across sovereign Freenet peer nodes.
+          <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
+            Decentralized Sovereign File Transfer
+          </h2>
+          <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
+            Wormhole enables fast, end-to-end encrypted file sharing using
+            <strong>Freenet WASM Contracts</strong>, content-addressed <strong>Blake3 Chunks</strong>, and sovereign storage.
           </p>
-          <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>Immutable &amp; Verifiable</strong>: Every chunk verified via Blake3 digest before reassembly.</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>No Central Servers</strong>: Stored across peer nodes without single points of failure.</span>
-            </li>
-          </ul>
         </div>
 
-        <!-- Pillar 2: Freenet Channel Contract -->
-        <div class="arch-card">
-          <div class="arch-card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <!-- 4 Architectural Pillars Grid (Freenet) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Pillar 1: Freenet Sovereign Storage -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>Freenet Sovereign Storage</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Default</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Files are sliced into verifiable 128KB chunks, addressed by cryptographic <strong>Blake3 hashes</strong>, and stored across sovereign Freenet peer nodes.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Immutable &amp; Verifiable</strong>: Every chunk verified via Blake3 digest before reassembly.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>No Central Servers</strong>: Stored across peer nodes without single points of failure.</span>
+              </li>
+            </ul>
           </div>
-          <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
-            <span>WASM Channel Contract</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">CRDT</span>
-          </h3>
-          <p class="text-xs text-zinc-400 leading-relaxed">
-            The <strong>wormhole-channel</strong> WASM contract coordinates transfer manifests on Freenet with join-semilattice merge laws, ensuring robust state sync.
-          </p>
-          <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>Lightweight State Sync</strong>: Encrypted manifest metadata coordinated safely on Freenet.</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>Deterministic Consensus</strong>: State updates validated by contract verification rules.</span>
-            </li>
-          </ul>
+
+          <!-- Pillar 2: Freenet Channel Contract -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>WASM Channel Contract</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">CRDT</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              The <strong>wormhole-channel</strong> WASM contract coordinates transfer manifests on Freenet with join-semilattice merge laws, ensuring robust state sync.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Lightweight State Sync</strong>: Encrypted manifest metadata coordinated safely on Freenet.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Deterministic Consensus</strong>: State updates validated by contract verification rules.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pillar 3: Web & CLI Interoperability -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>Universal Interoperability</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Web &amp; CLI</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Seamless cross-platform file transfers: send files from the CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">wh send --freenet</code> and download inside the Web App, or vice-versa.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>CLI + Web Gateway</strong>: Native integration with Freenet local node on port 7509.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Sandboxed Container</strong>: Safe execution inside Freenet Web Container.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pillar 4: E2EE -->
+          <div class="arch-card">
+            <div class="arch-card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
+              <span>End-to-End Encryption</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">AES-GCM</span>
+            </h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              All files are encrypted client-side using <strong>AES-GCM (256-bit)</strong> with PBKDF2 key derivation and chunk-index binding.
+            </p>
+            <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Zero-Knowledge Mnemonic</strong>: The code is both the rendezvous address and the secret key.</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="text-zinc-300 font-bold">&check;</span>
+                <span><strong>Confidentiality</strong>: Network peers and relays never inspect plaintext or metadata.</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <!-- Pillar 3: Web & CLI Interoperability -->
-        <div class="arch-card">
-          <div class="arch-card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
-            <span>Universal Interoperability</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Web &amp; CLI</span>
+        <!-- Lifecycle Workflow Diagram (Freenet) -->
+        <div class="wormhole-card p-6 space-y-4">
+          <h3 class="text-sm font-semibold text-zinc-100">
+            How Wormhole Works on Freenet
           </h3>
-          <p class="text-xs text-zinc-400 leading-relaxed">
-            Seamless cross-platform file transfers: send files from the CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">wh send --freenet</code> and download inside the Web App, or vice-versa.
-          </p>
-          <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>CLI + Web Gateway</strong>: Native integration with Freenet local node on port 7509.</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>Sandboxed Container</strong>: Safe execution inside Freenet Web Container.</span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Pillar 4: E2EE -->
-        <div class="arch-card">
-          <div class="arch-card-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h3 class="text-sm font-semibold text-zinc-100 mb-1.5 flex items-center gap-2">
-            <span>End-to-End Encryption</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">AES-GCM</span>
-          </h3>
-          <p class="text-xs text-zinc-400 leading-relaxed">
-            All files are encrypted client-side using <strong>AES-GCM (256-bit)</strong> with PBKDF2 key derivation and chunk-index binding.
-          </p>
-          <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>Zero-Knowledge Mnemonic</strong>: The code is both the rendezvous address and the secret key.</span>
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="text-zinc-300 font-bold">&check;</span>
-              <span><strong>Confidentiality</strong>: Network peers and relays never inspect plaintext or metadata.</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Lifecycle Workflow Diagram -->
-      <div class="wormhole-card p-6 space-y-4">
-        <h3 class="text-sm font-semibold text-zinc-100">
-          How Wormhole Works
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
-          <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
-            <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">01</span>
-            <h4 class="text-xs font-semibold text-zinc-200">Local Encryption</h4>
-            <p class="text-[11px] text-zinc-400">Sender generates mnemonic code and encrypts file via AES-256-GCM in the browser or terminal.</p>
-          </div>
-          <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
-            <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">02</span>
-            <h4 class="text-xs font-semibold text-zinc-200">Freenet Publishing</h4>
-            <p class="text-[11px] text-zinc-400">Sender publishes 128KB Blake3 chunks to Freenet storage and registers the manifest on the channel contract.</p>
-          </div>
-          <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
-            <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">03</span>
-            <h4 class="text-xs font-semibold text-zinc-200">Decentralized Sync</h4>
-            <p class="text-[11px] text-zinc-400">Receiver inputs code. Peers resolve manifest state from Freenet contract and fetch verifiable chunks.</p>
-          </div>
-          <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
-            <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">04</span>
-            <h4 class="text-xs font-semibold text-zinc-200">Local Decryption</h4>
-            <p class="text-[11px] text-zinc-400">Receiver verifies each chunk via Blake3, decrypts in memory via AES-256-GCM, and reassembles the file.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">01</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Local Encryption</h4>
+              <p class="text-[11px] text-zinc-400">Sender generates mnemonic code and encrypts file via AES-256-GCM in the browser or terminal.</p>
+            </div>
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">02</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Freenet Publishing</h4>
+              <p class="text-[11px] text-zinc-400">Sender publishes 128KB Blake3 chunks to Freenet storage and registers the manifest on the channel contract.</p>
+            </div>
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">03</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Decentralized Sync</h4>
+              <p class="text-[11px] text-zinc-400">Receiver inputs code. Peers resolve manifest state from Freenet contract and fetch verifiable chunks.</p>
+            </div>
+            <div class="flex flex-col p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-1.5">
+              <span class="w-6 h-6 rounded bg-zinc-900 text-zinc-300 flex items-center justify-center font-mono text-xs font-medium border border-zinc-800">04</span>
+              <h4 class="text-xs font-semibold text-zinc-200">Local Decryption</h4>
+              <p class="text-[11px] text-zinc-400">Receiver verifies each chunk via Blake3, decrypts in memory via AES-256-GCM, and reassembles the file.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -501,232 +647,295 @@
 
     <!-- ================= VIEW 3: CLI DOCS (`wh`) ================= -->
     <div id="view-cli" class="view-panel w-full hidden space-y-8 max-w-4xl py-4">
-      <!-- Hero Banner -->
-      <div class="text-center space-y-2">
-        <div
-          class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono uppercase tracking-wider">
-          Command Line Interface
-        </div>
-        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
-          Wormhole CLI (<code class="font-mono text-zinc-200">wh</code>)
-        </h2>
-        <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-          The CLI binary is named <strong><code class="text-zinc-200 font-mono">wh</code></strong> to avoid
-          collisions with <code class="text-zinc-400 font-mono">magic-wormhole</code>. Fast, lightweight, and sharing
-          the exact universal core with the browser dashboard.
-        </p>
-      </div>
 
-      <!-- Quick Installation Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Global Install -->
-        <div class="wormhole-card p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Global Installation</span>
-            <span class="text-[10px] text-zinc-500 font-mono">npm / git</span>
+      <!-- === CLI CONTENT: WEB / VERCEL (Default: WebRTC & IPFS) === -->
+      <div data-env-show="web" class="space-y-8">
+        <!-- Hero Banner -->
+        <div class="text-center space-y-2">
+          <div
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono uppercase tracking-wider">
+            Command Line Interface
           </div>
-          <div class="code-snippet-box">
-            <span class="text-zinc-200 select-all">npm install -g git+https://github.com/scobru/wormhole.git</span>
-            <button type="button" class="copy-cmd-btn" data-copy-text="npm install -g git+https://github.com/scobru/wormhole.git">
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                </path>
-              </svg>
-              <span>Copy</span>
-            </button>
-          </div>
-          <p class="text-[11px] text-zinc-500">Provides direct access to the global <code
-              class="text-zinc-300 font-mono">wh</code> command in any terminal shell.</p>
-        </div>
-
-        <!-- Instant npx Run -->
-        <div class="wormhole-card p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Run Instantly (npx)</span>
-            <span class="text-[10px] text-zinc-500 font-mono">npx</span>
-          </div>
-          <div class="code-snippet-box">
-            <span class="text-zinc-200 select-all">npx github:scobru/wormhole send &lt;file-path&gt;</span>
-            <button type="button" class="copy-cmd-btn" data-copy-text="npx github:scobru/wormhole send <file-path>">
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                </path>
-              </svg>
-              <span>Copy</span>
-            </button>
-          </div>
-          <p class="text-[11px] text-zinc-500">Zero installation required. Runs on-demand directly from GitHub anywhere Node.js is installed.
+          <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
+            Wormhole CLI (<code class="font-mono text-zinc-200">wh</code>)
+          </h2>
+          <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
+            The CLI binary is named <strong><code class="text-zinc-200 font-mono">wh</code></strong> to avoid
+            collisions with <code class="text-zinc-400 font-mono">magic-wormhole</code>. Fast, lightweight, and sharing
+            the exact universal core with the browser dashboard.
           </p>
         </div>
-      </div>
 
-      <!-- Terminal Mockup Window -->
-      <div class="terminal-window">
-        <div class="terminal-header">
-          <div class="terminal-dots">
-            <span class="terminal-dot"></span>
-            <span class="terminal-dot"></span>
-            <span class="terminal-dot"></span>
-          </div>
-          <div class="text-[11px] text-zinc-400 font-mono">bash — wh send document.pdf --freenet</div>
-          <div class="w-10"></div>
-        </div>
-        <div class="terminal-body space-y-2">
-          <div class="flex items-center justify-between text-zinc-500 text-xs border-b border-zinc-800 pb-2 mb-2">
-            <span>Terminal Simulation</span>
-            <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                </path>
-              </svg>
-              <span>Copy</span>
-            </button>
-          </div>
-          <div>
-            <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">wh send
-              document.pdf --freenet</span>
-          </div>
-          <div class="text-zinc-400">
-            [+] File: <span class="text-zinc-200">document.pdf</span> (14.2 MB)<br />
-            [+] Deriving AES-256-GCM encryption keys...<br />
-            [+] Connected to Freenet node: <span class="text-zinc-300">http://127.0.0.1:7509</span><br />
-            [+] Uploading 114 verifiable Blake3 chunks to Freenet...
-          </div>
-          <div class="my-2 p-2.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-300 text-xs font-mono">
-            Mnemonic Sync Code: <span class="text-zinc-100 font-bold">82-gentle-bird</span>
-          </div>
-          <div class="text-zinc-400">
-            [*] Manifest registered on Freenet Channel contract...<br />
-            [&check;] Receiver connected via Freenet Gateway<br />
-            [&check;] Verified Chunks: <span class="text-emerald-400">[====================] 100% (Blake3 Verified)</span><br />
-            [&check;] Transfer complete! Decrypted and verified by recipient.
-          </div>
-        </div>
-      </div>
-
-      <!-- Command Reference Table -->
-      <div class="wormhole-card p-6 space-y-4">
-        <h3 class="text-sm font-semibold text-zinc-100">
-          CLI Command Reference
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="table w-full text-left text-xs sm:text-sm">
-            <thead>
-              <tr class="border-b border-zinc-800 text-zinc-400">
-                <th class="py-2.5">Command</th>
-                <th class="py-2.5">Description</th>
-                <th class="py-2.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-850 font-mono text-xs">
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt; --freenet</td>
-                <td class="font-sans text-zinc-400">Cifra (AES-256-GCM) e memorizza il file sulla rete Freenet in chunk Blake3 da 128KB. Registra il manifest sul contratto channel.
-                </td>
-                <td class="text-right font-sans">
-                  <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">Copy</button>
-                </td>
-              </tr>
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">wh receive &lt;code&gt; --freenet</td>
-                <td class="font-sans text-zinc-400">Risolve il manifest su Freenet, scarica e verifica i chunk Blake3 e decifra il file in locale.
-                </td>
-                <td class="text-right font-sans">
-                  <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird --freenet">Copy</button>
-                </td>
-              </tr>
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt; [--p2p | --ipfs]</td>
-                <td class="font-sans text-zinc-400">Streaming P2P diretto o tramite relay IPFS opzionale tra terminali CLI.
-                </td>
-                <td class="text-right font-sans">
-                  <button type="button" class="copy-cmd-btn" data-copy-text="wh send my-file.zip">Copy</button>
-                </td>
-              </tr>
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">wh list</td>
-                <td class="font-sans text-zinc-400">Elenca i trasferimenti attivi memorizzati in locale.</td>
-                <td class="text-right font-sans">
-                  <button type="button" class="copy-cmd-btn" data-copy-text="wh list">Copy</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- CLI Options Table -->
-      <div class="wormhole-card p-6 space-y-4">
-        <h3 class="text-sm font-semibold text-zinc-100">
-          CLI Options &amp; Flags
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="table w-full text-left text-xs sm:text-sm">
-            <thead>
-              <tr class="border-b border-zinc-800 text-zinc-400">
-                <th class="py-2.5">Flag</th>
-                <th class="py-2.5">Shorthand</th>
-                <th class="py-2.5">Description</th>
-                <th class="py-2.5">Default</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-850 font-mono text-xs">
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">--freenet, --fn</td>
-                <td class="text-zinc-500">-</td>
-                <td class="font-sans text-zinc-400">Modalità Freenet sovrana (Default per interoperabilità con la Web App).</td>
-                <td class="text-emerald-400 font-semibold">true (Freenet)</td>
-              </tr>
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">Freenet Gateway</td>
-                <td class="text-zinc-500">-</td>
-                <td class="font-sans text-zinc-400">Connessione automatica al nodo Freenet locale (porta 7509).</td>
-                <td class="text-zinc-400">http://127.0.0.1:7509</td>
-              </tr>
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">--p2p</td>
-                <td class="text-zinc-500">-</td>
-                <td class="font-sans text-zinc-400">Streaming diretto WebRTC P2P tra due CLI aperte simultaneamente.</td>
-                <td class="text-zinc-500">fallback</td>
-              </tr>
-              <tr class="hover:bg-zinc-850/40">
-                <td class="py-3 text-zinc-200 font-semibold">--ipfs, --relay</td>
-                <td class="text-zinc-500">-</td>
-                <td class="font-sans text-zinc-400">Relay IPFS opzionale tra nodi CLI.</td>
-                <td class="text-zinc-500">false</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Real World Examples Grid -->
-      <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-zinc-100">
-          Practical Usage Examples
-        </h3>
+        <!-- Quick Installation Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="wormhole-card p-5 space-y-2">
-            <div class="text-xs font-semibold text-zinc-200">1. Invio CLI &rarr; Ricezione Web App</div>
-            <p class="text-xs text-zinc-400">Invia da terminale e scarica da questa pagina Freenet:</p>
-            <div class="code-snippet-box">
-              <span class="text-zinc-200 select-all text-xs">wh send document.pdf --freenet</span>
-              <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">Copy</button>
+          <!-- Global Install -->
+          <div class="wormhole-card p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Global Installation</span>
+              <span class="text-[10px] text-zinc-500 font-mono">npm / git</span>
             </div>
-            <p class="text-[11px] text-zinc-500 mt-1">Incolla il codice generato (es. <code class="text-zinc-300">82-gentle-bird</code>) nel tab <strong>Receive File</strong> qui sopra per scaricarlo nel browser.</p>
+            <div class="code-snippet-box">
+              <span class="text-zinc-200 select-all">npm install -g git+https://github.com/scobru/wormhole.git</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="npm install -g git+https://github.com/scobru/wormhole.git">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                  </path>
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-zinc-500">Provides direct access to the global <code
+                class="text-zinc-300 font-mono">wh</code> command in any terminal shell.</p>
           </div>
 
-          <div class="wormhole-card p-5 space-y-2">
-            <div class="text-xs font-semibold text-zinc-200">2. Invio Web App &rarr; Ricezione CLI</div>
-            <p class="text-xs text-zinc-400">Trascina un file nella tab "Send File" del browser, poi scaricalo dal terminale ovunque:</p>
-            <div class="code-snippet-box">
-              <span class="text-zinc-200 select-all text-xs">wh receive 82-gentle-bird --freenet</span>
-              <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird --freenet">Copy</button>
+          <!-- Instant npx Run -->
+          <div class="wormhole-card p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Run Instantly (npx)</span>
+              <span class="text-[10px] text-zinc-500 font-mono">npx</span>
             </div>
-            <p class="text-[11px] text-zinc-500 mt-1">Il terminale verifica ogni chunk Blake3 e decifra il file originale istantaneamente.</p>
+            <div class="code-snippet-box">
+              <span class="text-zinc-200 select-all">npx github:scobru/wormhole send &lt;file-path&gt;</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="npx github:scobru/wormhole send <file-path>">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                  </path>
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-zinc-500">Zero installation required. Runs on-demand directly from GitHub anywhere Node.js is installed.
+            </p>
+          </div>
+        </div>
+
+        <!-- Terminal Mockup Window (Web / P2P) -->
+        <div class="terminal-window">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+            </div>
+            <div class="text-[11px] text-zinc-400 font-mono">bash — wh send document.pdf</div>
+            <div class="w-10"></div>
+          </div>
+          <div class="terminal-body space-y-2">
+            <div class="flex items-center justify-between text-zinc-500 text-xs border-b border-zinc-800 pb-2 mb-2">
+              <span>Terminal Simulation</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                  </path>
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <div>
+              <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">wh send document.pdf</span>
+            </div>
+            <div class="text-zinc-400">
+              [+] File: <span class="text-zinc-200">document.pdf</span> (14.2 MB)<br />
+              [+] Deriving AES-256-GCM encryption keys...<br />
+              [+] Waiting for peer connection over decentralized relay...
+            </div>
+            <div class="my-2 p-2.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-300 text-xs font-mono">
+              Mnemonic Sync Code: <span class="text-zinc-100 font-bold">82-gentle-bird</span>
+            </div>
+            <div class="text-zinc-400">
+              [&check;] Receiver connected via WebRTC<br />
+              [&check;] Streaming DataChannel: <span class="text-emerald-400">[====================] 100%</span><br />
+              [&check;] Transfer complete! Decrypted and verified by recipient.
+            </div>
+          </div>
+        </div>
+
+        <!-- Command Reference Table (Web / P2P) -->
+        <div class="wormhole-card p-6 space-y-4">
+          <h3 class="text-sm font-semibold text-zinc-100">
+            CLI Command Reference
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="table w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr class="border-b border-zinc-800 text-zinc-400">
+                  <th class="py-2.5">Command</th>
+                  <th class="py-2.5">Description</th>
+                  <th class="py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-850 font-mono text-xs">
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt;</td>
+                  <td class="font-sans text-zinc-400">Cifra (AES-256-GCM) e avvia lo streaming P2P WebRTC diretto tra terminali o browser.</td>
+                  <td class="text-right font-sans">
+                    <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf">Copy</button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">wh receive &lt;code&gt;</td>
+                  <td class="font-sans text-zinc-400">Si connette al sender tramite il codice di sincronizzazione, riceve i chunk e decifra il file in locale.</td>
+                  <td class="text-right font-sans">
+                    <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird">Copy</button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt; --ipfs</td>
+                  <td class="font-sans text-zinc-400">Carica i chunk cifrati su relay IPFS per trasferimento asincrono tra nodi.</td>
+                  <td class="text-right font-sans">
+                    <button type="button" class="copy-cmd-btn" data-copy-text="wh send my-file.zip --ipfs">Copy</button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">wh list</td>
+                  <td class="font-sans text-zinc-400">Elenca i trasferimenti attivi memorizzati in locale.</td>
+                  <td class="text-right font-sans">
+                    <button type="button" class="copy-cmd-btn" data-copy-text="wh list">Copy</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Real World Examples Grid (Web) -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold text-zinc-100">
+            Practical Usage Examples
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="wormhole-card p-5 space-y-2">
+              <div class="text-xs font-semibold text-zinc-200">1. Invio CLI &rarr; Ricezione Web App</div>
+              <p class="text-xs text-zinc-400">Invia da terminale e ricevi su questo browser:</p>
+              <div class="code-snippet-box">
+                <span class="text-zinc-200 select-all text-xs">wh send document.pdf</span>
+                <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf">Copy</button>
+              </div>
+              <p class="text-[11px] text-zinc-500 mt-1">Incolla il codice generato (es. <code class="text-zinc-300">82-gentle-bird</code>) nel tab <strong>Receive File</strong> qui sopra per avviare il download nel browser.</p>
+            </div>
+
+            <div class="wormhole-card p-5 space-y-2">
+              <div class="text-xs font-semibold text-zinc-200">2. Invio Web App &rarr; Ricezione CLI</div>
+              <p class="text-xs text-zinc-400">Trascina un file nella tab "Send File" del browser, poi scaricalo dal terminale ovunque:</p>
+              <div class="code-snippet-box">
+                <span class="text-zinc-200 select-all text-xs">wh receive 82-gentle-bird</span>
+                <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird">Copy</button>
+              </div>
+              <p class="text-[11px] text-zinc-500 mt-1">Il terminale stabilisce la connessione P2P e decifra il file originale istantaneamente.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === CLI CONTENT: FREENET CONTAINER (Active only inside Freenet) === -->
+      <div data-env-show="freenet" class="hidden space-y-8">
+        <!-- Hero Banner (Freenet) -->
+        <div class="text-center space-y-2">
+          <div
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono uppercase tracking-wider">
+            Command Line Interface
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
+            Wormhole CLI (<code class="font-mono text-zinc-200">wh</code>) on Freenet
+          </h2>
+          <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
+            The CLI binary communicates directly with your local Freenet node on port 7509, using the exact same Blake3 chunking and channel contracts as this Web App.
+          </p>
+        </div>
+
+        <!-- Terminal Mockup Window (Freenet) -->
+        <div class="terminal-window">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+            </div>
+            <div class="text-[11px] text-zinc-400 font-mono">bash — wh send document.pdf --freenet</div>
+            <div class="w-10"></div>
+          </div>
+          <div class="terminal-body space-y-2">
+            <div class="flex items-center justify-between text-zinc-500 text-xs border-b border-zinc-800 pb-2 mb-2">
+              <span>Terminal Simulation</span>
+              <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                  </path>
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <div>
+              <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">wh send
+                document.pdf --freenet</span>
+            </div>
+            <div class="text-zinc-400">
+              [+] File: <span class="text-zinc-200">document.pdf</span> (14.2 MB)<br />
+              [+] Deriving AES-256-GCM encryption keys...<br />
+              [+] Connected to Freenet node: <span class="text-zinc-300">http://127.0.0.1:7509</span><br />
+              [+] Uploading 114 verifiable Blake3 chunks to Freenet...
+            </div>
+            <div class="my-2 p-2.5 bg-zinc-900 border border-zinc-800 rounded text-zinc-300 text-xs font-mono">
+              Mnemonic Sync Code: <span class="text-zinc-100 font-bold">82-gentle-bird</span>
+            </div>
+            <div class="text-zinc-400">
+              [*] Manifest registered on Freenet Channel contract...<br />
+              [&check;] Receiver connected via Freenet Gateway<br />
+              [&check;] Verified Chunks: <span class="text-emerald-400">[====================] 100% (Blake3 Verified)</span><br />
+              [&check;] Transfer complete! Decrypted and verified by recipient.
+            </div>
+          </div>
+        </div>
+
+        <!-- Command Reference Table (Freenet) -->
+        <div class="wormhole-card p-6 space-y-4">
+          <h3 class="text-sm font-semibold text-zinc-100">
+            Freenet CLI Commands &amp; Options
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="table w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr class="border-b border-zinc-800 text-zinc-400">
+                  <th class="py-2.5">Command / Flag</th>
+                  <th class="py-2.5">Description</th>
+                  <th class="py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-850 font-mono text-xs">
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt; --freenet</td>
+                  <td class="font-sans text-zinc-400">Cifra (AES-256-GCM) e memorizza il file sulla rete Freenet in chunk Blake3 da 128KB. Registra il manifest sul contratto channel.</td>
+                  <td class="text-right font-sans">
+                    <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">Copy</button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">wh receive &lt;code&gt; --freenet</td>
+                  <td class="font-sans text-zinc-400">Risolve il manifest su Freenet, scarica e verifica i chunk Blake3 e decifra il file in locale.</td>
+                  <td class="text-right font-sans">
+                    <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird --freenet">Copy</button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">--freenet, --fn</td>
+                  <td class="font-sans text-zinc-400">Modalità Freenet sovrana (default per container web Freenet).</td>
+                  <td class="text-right font-sans">
+                    <span class="text-emerald-400 font-mono text-xs">true</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-zinc-850/40">
+                  <td class="py-3 text-zinc-200 font-semibold">Freenet Gateway</td>
+                  <td class="font-sans text-zinc-400">Connessione automatica al nodo locale (http://127.0.0.1:7509).</td>
+                  <td class="text-right font-sans">
+                    <span class="text-zinc-400 font-mono text-xs">7509</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -757,7 +966,8 @@
       <div class="flex items-center gap-2">
         <span class="font-medium text-zinc-300">Wormhole</span>
         <span class="text-zinc-700">&bull;</span>
-        <span>Decentralized Sovereign Transfer on Freenet</span>
+        <span data-env-show="web">Decentralized P2P &amp; IPFS Transfer</span>
+        <span data-env-show="freenet" class="hidden">Decentralized Sovereign Transfer on Freenet</span>
       </div>
 
       <div class="flex flex-wrap justify-center items-center gap-4">

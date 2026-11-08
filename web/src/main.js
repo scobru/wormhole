@@ -614,6 +614,9 @@ function resetUI() {
   if (isFreenetEnvironment()) {
     const fnRadio = document.getElementById('mode-freenet');
     if (fnRadio) fnRadio.checked = true;
+  } else {
+    const p2pRadio = document.getElementById('mode-p2p');
+    if (p2pRadio) p2pRadio.checked = true;
   }
   switchTab('send');
 }
@@ -779,33 +782,64 @@ function setupCopyButtons() {
   });
 }
 
+function applyEnvironmentMode() {
+  const isFreenet = isFreenetEnvironment();
+
+  document.querySelectorAll('[data-env-show]').forEach((el) => {
+    const targetEnv = el.dataset.envShow;
+    if (targetEnv === 'freenet') {
+      el.classList.toggle('hidden', !isFreenet);
+    } else if (targetEnv === 'web') {
+      el.classList.toggle('hidden', isFreenet);
+    }
+  });
+
+  const badge = document.getElementById('protocol-badge');
+  const fnRadio = document.getElementById('mode-freenet');
+  const p2pRadio = document.getElementById('mode-p2p');
+  const modeSelector = document.getElementById('routing-mode-selector');
+  const fnBanner = document.getElementById('freenet-mode-banner');
+
+  if (isFreenet) {
+    if (badge) {
+      badge.textContent = 'Freenet Native';
+      badge.className = 'text-zinc-400 font-mono text-[11px] tracking-wide bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800';
+    }
+    if (fnRadio) {
+      fnRadio.checked = true;
+    }
+    if (modeSelector) {
+      modeSelector.classList.add('hidden');
+    }
+    if (fnBanner) {
+      fnBanner.classList.remove('hidden');
+    }
+    document.title = 'Wormhole — Decentralized Sovereign File Transfer on Freenet';
+  } else {
+    if (badge) {
+      badge.textContent = 'WebRTC & IPFS';
+      badge.className = 'text-zinc-400 font-mono text-[11px] tracking-wide bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800';
+    }
+    if (p2pRadio) {
+      p2pRadio.checked = true;
+    }
+    if (modeSelector) {
+      modeSelector.classList.remove('hidden');
+    }
+    if (fnBanner) {
+      fnBanner.classList.add('hidden');
+    }
+    document.title = 'Wormhole — Decentralized P2P & IPFS File Transfer';
+  }
+}
+
 function setup() {
   elements = getDomElements();
   wireEventListeners();
   setupViewNavigation();
   setupCopyButtons();
+  applyEnvironmentMode();
   resetUI();
-
-  // Auto-detect Freenet gateway environment
-  if (isFreenetEnvironment()) {
-    const fnRadio = document.getElementById('mode-freenet');
-    if (fnRadio) {
-      fnRadio.checked = true;
-    }
-    const modeSelector = document.getElementById('routing-mode-selector');
-    if (modeSelector) {
-      modeSelector.classList.add('hidden');
-    }
-    const fnBanner = document.getElementById('freenet-mode-banner');
-    if (fnBanner) {
-      fnBanner.classList.remove('hidden');
-    }
-    const badge = document.getElementById('protocol-badge');
-    if (badge) {
-      badge.textContent = 'Freenet Native';
-      badge.className = 'text-zinc-400 font-mono text-[11px] tracking-wide bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800';
-    }
-  }
 
   getWormhole().catch((e) => console.warn('Wormhole pre-init notice:', e));
 }
