@@ -146,7 +146,7 @@ class WormholeCLI {
     return new WormholeCLI({ gun, relayUrl, authToken });
   }
 
-  handleStatusChange({ code, status, message, metadata, fileData }) {
+  handleStatusChange({ code, status, message, metadata, fileData, warning, fecReport }) {
     switch (status) {
       case WormholeStatus.CHECKING_RELAY:
       case WormholeStatus.ENCRYPTING:
@@ -161,7 +161,16 @@ class WormholeCLI {
       case WormholeStatus.FREENET_PUBLISHING_MANIFEST:
       case WormholeStatus.FREENET_RESOLVING_MANIFEST:
       case WormholeStatus.FREENET_DOWNLOADING_CHUNKS:
-        if (this.spinner.isSpinning) {
+      case WormholeStatus.FREENET_RECONSTRUCTING:
+      case 'freenet-reconstructing':
+        if (warning) {
+          if (this.spinner.isSpinning) {
+            this.spinner.warn(chalk.yellow(message));
+            this.spinner.start(chalk.cyan('Continuing retrieval with resilient parity...'));
+          } else {
+            console.log(chalk.yellow(message));
+          }
+        } else if (this.spinner.isSpinning) {
           this.spinner.text = message;
         } else {
           this.spinner.start(message);
@@ -174,7 +183,7 @@ class WormholeCLI {
 
       case WormholeStatus.COMPLETED:
         if (fileData) {
-          this.saveFile(fileData, this.spinner);
+          this.saveFile({ ...fileData, fecReport: fileData?.fecReport || fecReport }, this.spinner);
         } else {
           if (this.spinner.isSpinning) {
             this.spinner.succeed(message || 'Transfer completed successfully!');
@@ -425,7 +434,7 @@ class WormholeCLI {
 
 
   async saveFile(fileData, spinner) {
-    const { blob, filename, buffer: dataBuffer } = fileData;
+    const { blob, filename, buffer: dataBuffer, fecReport } = fileData;
     try {
       const buffer = dataBuffer
         ? Buffer.from(dataBuffer)
@@ -446,6 +455,21 @@ class WormholeCLI {
 
       spinner.succeed(`✅ File saved: ${outputPath}`);
       console.log(chalk.green(`📁 Size: ${filesize(buffer.length)}`));
+
+      if (fecReport) {
+        console.log('');
+        console.log(chalk.bold.magenta('🛡️  REED-SOLOMON FEC INTEGRITY REPORT:'));
+        if (fecReport.recovered) {
+          console.log(chalk.yellow(`   ⚠️  Missing shards on network: ${fecReport.missingDataCount} data shard(s)`));
+          console.log(chalk.cyan(`   🔧 Parity shards used:        ${fecReport.parityShardsUsed} Reed-Solomon shard(s)`));
+          console.log(chalk.green.bold(`   ✅ File bit-for-bit restored: 100% data integrity verified`));
+        } else {
+          console.log(chalk.green(`   ✅ Clean download: All ${fecReport.targetK} original data shards intact (0 lost)`));
+          console.log(chalk.gray(`   ✅ Redundancy: 0 parity shards needed (clean network retrieval)`));
+        }
+        console.log('');
+      }
+
       console.log(chalk.gray('👋 Goodbye!\n'));
       setTimeout(() => process.exit(0), 500);
     } catch (error) {
@@ -513,9 +537,9 @@ async function main() {
     console.log(chalk.blue('🌌 FREEHOLE CLI'));
     console.log(chalk.gray('Secure P2P, IPFS & Freenet sovereign file transfer\n'));
     console.log('Usage:');
-    console.log('  freehole send <file> [options]     # Send a file');
-    console.log('  freehole receive <code> [options]  # Receive a file');
-    console.log('  freehole list                      # List transfers\n');
+    console.log('  fh send <file> [options]     # Send a file (or: freehole)');
+    console.log('  fh receive <code> [options]  # Receive a file');
+    console.log('  fh list                      # List transfers\n');
     console.log('Transfer options:');
     console.log('  --freenet, --fn              Send or receive via decentralized Freenet network');
     console.log('  --p2p                        Send via direct WebRTC P2P (default)');

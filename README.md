@@ -1,6 +1,6 @@
 # 🌀 FREEHOLE
 
-A high-performance, decentralized sovereign file transfer tool for **Freenet** and **WebRTC/IPFS** using **ZEN**. FREEHOLE provides zero-knowledge, end-to-end encrypted, asynchronous file sharing on Freenet and real-time P2P through both a fast CLI interface (`wh`) and a modern web dashboard.
+A high-performance, decentralized sovereign file transfer tool for **Freenet** and **WebRTC/IPFS** using **ZEN**. FREEHOLE provides zero-knowledge, end-to-end encrypted, asynchronous file sharing on Freenet and real-time P2P through both a fast CLI interface (`fh`) and a modern web dashboard.
 
 ---
 
@@ -43,9 +43,9 @@ FREEHOLE uses a hybrid architecture designed for speed, privacy, and reliability
 
 ---
 
-## 💻 CLI Interface (`wh`)
+## 💻 CLI Interface (`fh`)
 
-The CLI binary is named **`wh`** to prevent name collisions with `magic-wormhole`.
+The CLI binary is named **`fh`** (or **`freehole`**).
 
 ### Installation
 
@@ -64,9 +64,9 @@ npx github:scobru/freehole send <file-path>
 
 | Command | Description |
 |---------|-------------|
-| `wh send <file> [options]` | Encrypts and sends a file via WebRTC P2P (or IPFS relay), outputting a sync code. |
-| `wh receive <code> [options]` | Downloads and decrypts a file using the sync code. |
-| `wh list` | Lists currently active transfers (experimental). |
+| `fh send <file> [options]` | Encrypts and sends a file via WebRTC P2P (or IPFS relay), outputting a sync code. |
+| `fh receive <code> [options]` | Downloads and decrypts a file using the sync code. |
+| `fh list` | Lists currently active transfers (experimental). |
 
 ### CLI Options
 
@@ -81,20 +81,20 @@ npx github:scobru/freehole send <file-path>
 ### Examples
 
 ```bash
-# 1. Sovereign P2P transfer over Freenet (Chunk contracts, async, serverless)
-wh send archive.zip --freenet
-wh receive 92-brave-wave --freenet
+# 1. Sovereign transfer over Freenet (Chunk contracts, async, serverless)
+fh send archive.zip --freenet
+fh receive 92-brave-wave --freenet
 
 # 2. Direct WebRTC P2P transfer (Recommended, high speed)
-wh send my-video.mp4
-wh receive 82-gentle-bird
+fh send my-video.mp4
+fh receive 82-gentle-bird
 
 # 3. Staged transfer via IPFS relay (scobru/delay)
-wh send backup.zip --ipfs
-wh receive 14-calm-wave
+fh send backup.zip --ipfs
+fh receive 14-calm-wave
 
 # 4. Using a custom IPFS relay
-wh send document.pdf --ipfs -u https://my-relay.example.com -t my_secret_token
+fh send document.pdf --ipfs -u https://my-relay.example.com -t my_secret_token
 ```
 
 ---
@@ -145,7 +145,7 @@ The web interface will be available at `http://localhost:5173`.
 ```text
 wormhole/
 ├── src/
-│   ├── index.js              # CLI Application (binary: 'wh')
+│   ├── index.js              # CLI Application (binary: 'fh')
 │   └── core.js               # CLI proxy for shared transfer logic
 ├── web/
 │   ├── src/
@@ -156,7 +156,7 @@ wormhole/
 │   ├── styles/
 │   │   └── wormhole.css      # Design System & Styling
 │   └── index.html            # Web Entry Point
-├── package.json              # Main project config (defines 'wh' binary)
+├── package.json              # Main project config (defines 'fh' binary)
 └── README.md                 # Project Documentation
 ```
 

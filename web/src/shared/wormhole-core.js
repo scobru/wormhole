@@ -55,6 +55,7 @@ export const WormholeStatus = Object.freeze({
   FREENET_PUBLISHING_MANIFEST: 'freenet-publishing-manifest',
   FREENET_RESOLVING_MANIFEST: 'freenet-resolving-manifest',
   FREENET_DOWNLOADING_CHUNKS: 'freenet-downloading-chunks',
+  FREENET_RECONSTRUCTING: 'freenet-reconstructing',
 });
 
 function arrayBufferToBase64(buffer) {
@@ -882,18 +883,27 @@ export class WormholeCore {
           onStatusChange: this.onStatusChange,
         });
         const blob = fileData.file || new Blob([fileData.data], { type: fileData.type });
+        const message =
+          fileData.message ||
+          (fileData.fecReport?.recovered
+            ? `File 100% restored! Recovered ${fileData.fecReport.missingDataCount} missing shard(s) via Reed-Solomon FEC.`
+            : 'File successfully received from Freenet with 100% integrity!');
+
         this.onStatusChange({
           code,
           status: WormholeStatus.COMPLETED,
-          message: 'File successfully received from Freenet!',
+          message,
+          fecReport: fileData.fecReport,
           fileData: {
             blob,
             filename: fileData.filename,
             buffer: fileData.data,
+            fecReport: fileData.fecReport,
             metadata: {
               filename: fileData.filename,
               size: fileData.size,
               type: fileData.type,
+              fecReport: fileData.fecReport,
             },
           },
         });

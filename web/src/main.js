@@ -475,7 +475,7 @@ async function connectToSender() {
   instance.receive(code, RELAY_URL, isFreenet ? 'freenet' : 'auto');
 }
 
-function handleStatusChange({ status, message, metadata, fileData }) {
+function handleStatusChange({ status, message, metadata, fileData, warning, fecReport, stats }) {
   switch (status) {
     case WormholeStatus.CHECKING_RELAY:
       showStatus('send', 'info', message);
@@ -500,8 +500,26 @@ function handleStatusChange({ status, message, metadata, fileData }) {
       showStatus('send', 'info', message);
       break;
     case WormholeStatus.FREENET_RESOLVING_MANIFEST:
-    case WormholeStatus.FREENET_DOWNLOADING_CHUNKS:
       showStatus('receive', 'info', message);
+      break;
+    case WormholeStatus.FREENET_DOWNLOADING_CHUNKS:
+    case 'freenet-downloading-chunks':
+    case 'freenet-reconstructing':
+      showStatus('receive', warning ? 'warning' : 'info', message);
+      if (stats) {
+        const statsEl = document.getElementById('receive-fec-stats');
+        const shardsEl = document.getElementById('fec-stat-shards');
+        const statusEl = document.getElementById('fec-stat-status');
+        if (statsEl && shardsEl && statusEl) {
+          statsEl.classList.remove('hidden');
+          shardsEl.textContent = `Shards: ${stats.retrieved}/${stats.required} (${stats.total} total)`;
+          if (stats.failed > 0) {
+            statusEl.innerHTML = `<span class="text-amber-400 font-medium">⚠️ ${stats.failed} missed (parity covering)</span>`;
+          } else {
+            statusEl.innerHTML = `<span class="text-emerald-400 font-medium">✔ 0 missed</span>`;
+          }
+        }
+      }
       break;
     case WormholeStatus.SENT:
       if (elements.progressContainers?.send) {
@@ -519,11 +537,14 @@ function handleStatusChange({ status, message, metadata, fileData }) {
       if (fileData?.blob) {
         downloadBlob(fileData.blob, fileData.filename ?? 'download');
       }
-      showStatus(state.activeTab, 'success', message);
+      const report = fecReport || fileData?.fecReport;
+      showStatus(state.activeTab, 'success', message, report);
       setButtonLoading(elements.sendButton, false);
       setButtonLoading(elements.receiveButton, false);
       elements.sendButton.disabled = true;
-      window.setTimeout(resetUI, 4000);
+      if (!isFreenetEnvironment()) {
+        window.setTimeout(resetUI, 4000);
+      }
       break;
     case WormholeStatus.UNPINNING:
       showStatus('send', 'info', message);
@@ -581,7 +602,7 @@ function handleProgress({ progress }) {
   updateProgress(state.activeTab, progress);
 }
 
-function showStatus(tab, type, message) {
+function showStatus(tab, type, message, fecReport = null) {
   const statusContainer = elements.status[tab];
   if (!statusContainer) {
     return;
@@ -590,6 +611,8 @@ function showStatus(tab, type, message) {
   const alertColor =
     type === 'error'
       ? 'bg-red-950/40 border-red-900/40 text-red-200'
+      : type === 'warning'
+      ? 'bg-amber-950/40 border-amber-900/40 text-amber-200'
       : type === 'success'
       ? 'bg-emerald-950/40 border-emerald-900/40 text-emerald-200'
       : 'bg-zinc-900 border-zinc-800 text-zinc-200';
@@ -597,6 +620,8 @@ function showStatus(tab, type, message) {
   const iconSvg =
     type === 'error'
       ? '<svg class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+      : type === 'warning'
+      ? '<svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
       : type === 'success'
       ? '<svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
       : '<svg class="w-4 h-4 text-zinc-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
@@ -604,8 +629,43 @@ function showStatus(tab, type, message) {
   statusContainer.textContent = '';
 
   const alertDiv = document.createElement('div');
-  alertDiv.className = `wormhole-alert flex items-center gap-2.5 p-3 text-xs font-medium ${alertColor} shadow-md`;
-  alertDiv.innerHTML = `${iconSvg}<span>${message}</span>`;
+  alertDiv.className = `wormhole-alert flex flex-col gap-2 p-3 text-xs font-medium ${alertColor} shadow-md`;
+
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'flex items-center gap-2.5';
+  headerDiv.innerHTML = `${iconSvg}<span>${message}</span>`;
+  alertDiv.appendChild(headerDiv);
+
+  if (fecReport) {
+    const fecDiv = document.createElement('div');
+    fecDiv.className = 'mt-2 pt-2 border-t border-zinc-800/80 text-[11px] leading-relaxed';
+    if (fecReport.recovered) {
+      fecDiv.innerHTML = `
+        <div class="font-bold text-amber-300 flex items-center gap-1.5 mb-1">
+          <span>⚡ Reed-Solomon Self-Healing Report</span>
+        </div>
+        <div class="text-zinc-300 space-y-0.5">
+          <div>• Original data shards downloaded: <span class="font-semibold text-zinc-100">${fecReport.intactDataShards}/${fecReport.targetK}</span></div>
+          <div>• Failed / missing data shards: <span class="font-semibold text-amber-400">${fecReport.missingDataCount}</span></div>
+          <div>• Parity shards used to reconstruct: <span class="font-semibold text-emerald-400">${fecReport.parityShardsUsed}</span></div>
+          <div class="text-emerald-300 font-semibold mt-1">✔ Restored byte-for-byte using RS erasure coding!</div>
+        </div>
+      `;
+    } else {
+      fecDiv.innerHTML = `
+        <div class="font-bold text-emerald-300 flex items-center gap-1.5 mb-1">
+          <span>🛡️ Reed-Solomon Integrity Report</span>
+        </div>
+        <div class="text-zinc-300 space-y-0.5">
+          <div>• Clean data shards received: <span class="font-semibold text-emerald-300">${fecReport.intactDataShards}/${fecReport.targetK}</span></div>
+          <div>• Missing shards: <span class="font-semibold text-emerald-300">0</span></div>
+          <div>• Redundancy overhead needed: <span class="font-semibold text-zinc-400">0% (direct assembly)</span></div>
+          <div class="text-emerald-300 font-semibold mt-1">✔ All data shards verified intact. Zero reconstruction needed.</div>
+        </div>
+      `;
+    }
+    alertDiv.appendChild(fecDiv);
+  }
 
   statusContainer.appendChild(alertDiv);
 }

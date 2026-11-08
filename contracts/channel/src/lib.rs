@@ -1,7 +1,7 @@
 //! Wormhole Channel contract on Freenet: decentralized rendezvous & file manifest channel.
 //!
 //! Parameters: 32-byte BLAKE3 hash of the mnemonic rendezvous code.
-//! State: JSON-encoded ChannelState containing encrypted file manifest and/or WebRTC signaling data.
+//! State: JSON-encoded ChannelState containing encrypted file manifest.
 //!
 //! Merge laws:
 //! - manifest: once set, stays (or updates if newer timestamp)

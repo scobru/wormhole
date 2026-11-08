@@ -616,10 +616,31 @@ export async function receiveViaFreenet(
   });
 
   const receivedShards = [];
+  const failedShards = [];
 
   for (let i = 0; i < totalChunks; i++) {
     const addr = chunks[i];
     const chunkIv = makeChunkIv(baseIv, i);
+    const isParityShard = isFec && i >= targetK;
+    const shardLabel = isFec
+      ? (isParityShard ? `Parity shard #${i - targetK + 1}/${fec.m}` : `Data shard #${i + 1}/${targetK}`)
+      : `Chunk #${i + 1}/${totalChunks}`;
+
+    onStatusChange({
+      code,
+      status: 'freenet-downloading-chunks',
+      message: isFec
+        ? `Fetching ${shardLabel} (${receivedShards.length}/${targetK} required)${failedShards.length > 0 ? ` · ⚠️ ${failedShards.length} missed` : ''}...`
+        : `Fetching chunk ${i + 1}/${totalChunks}...`,
+      stats: {
+        retrieved: receivedShards.length,
+        required: targetK,
+        total: totalChunks,
+        failed: failedShards.length,
+        currentShard: i + 1,
+        isParity: isParityShard,
+      },
+    });
 
     try {
       const chunkEnc = await getChunk(addr);
@@ -627,7 +648,7 @@ export async function receiveViaFreenet(
         await subtle.decrypt({ name: 'AES-GCM', iv: chunkIv }, aesKey, chunkEnc)
       );
 
-      receivedShards.push({ index: i, data: chunkPlain });
+      receivedShards.push({ index: i, data: chunkPlain, isParity: isParityShard });
 
       const percent = Math.min(100, Math.round((receivedShards.length / targetK) * 100));
       onProgress({
@@ -636,13 +657,20 @@ export async function receiveViaFreenet(
         total: size,
         chunkIndex: receivedShards.length,
         totalChunks: targetK,
+        failedCount: failedShards.length,
       });
       onStatusChange({
         code,
         status: 'freenet-downloading-chunks',
         message: isFec
-          ? `Retrieved Freenet shard ${receivedShards.length}/${targetK} required (${percent}%)`
+          ? `Retrieved ${shardLabel} [${receivedShards.length}/${targetK} required, ${percent}%]${failedShards.length > 0 ? ` · ⚠️ ${failedShards.length} missed` : ''}`
           : `Downloading from Freenet: ${receivedShards.length}/${totalChunks} (${percent}%)`,
+        stats: {
+          retrieved: receivedShards.length,
+          required: targetK,
+          total: totalChunks,
+          failed: failedShards.length,
+        },
       });
 
       // Once we have reached K shards under FEC, we have mathematically sufficient data to reconstruct!
@@ -650,17 +678,65 @@ export async function receiveViaFreenet(
         break;
       }
     } catch (err) {
+      failedShards.push({ index: i, isParity: isParityShard, error: err.message });
       console.warn(`[FreeHole FEC] Shard ${i} unavailable (${err.message}). Resilient parity will compensate.`);
+      onStatusChange({
+        code,
+        status: 'freenet-downloading-chunks',
+        warning: true,
+        message: isFec
+          ? `⚠️ ${shardLabel} unreachable on peer (${err.message || 'timed out'}). Parity will compensate (${failedShards.length} missed so far).`
+          : `⚠️ Chunk #${i + 1} unavailable.`,
+        stats: {
+          retrieved: receivedShards.length,
+          required: targetK,
+          total: totalChunks,
+          failed: failedShards.length,
+        },
+      });
     }
   }
 
   let finalBytes;
+  let fecReport = null;
+
   if (isFec) {
     if (receivedShards.length < targetK) {
       throw new Error(
-        `Failed to reconstruct file: only ${receivedShards.length}/${targetK} shards available on Freenet.`
+        `Failed to reconstruct file: only ${receivedShards.length}/${targetK} shards available on Freenet (${failedShards.length} shards unreachable).`
       );
     }
+
+    const receivedIndices = new Set(receivedShards.map((s) => s.index));
+    const missingDataIndices = [];
+    for (let d = 0; d < targetK; d++) {
+      if (!receivedIndices.has(d)) {
+        missingDataIndices.push(d);
+      }
+    }
+    const parityShardsUsed = receivedShards.filter((s) => s.index >= targetK).length;
+    const hasRecovered = missingDataIndices.length > 0;
+
+    fecReport = {
+      recovered: hasRecovered,
+      missingDataCount: missingDataIndices.length,
+      missingDataIndices,
+      parityShardsUsed,
+      totalShards,
+      targetK,
+      intactDataShards: targetK - missingDataIndices.length,
+      failedShardsCount: failedShards.length,
+    };
+
+    if (hasRecovered) {
+      onStatusChange({
+        code,
+        status: 'freenet-reconstructing',
+        message: `🔄 Reed-Solomon Reconstruction: ${missingDataIndices.length} data shard(s) missing from network. Restoring bit-for-bit using ${parityShardsUsed} parity shard(s)...`,
+        fecReport,
+      });
+    }
+
     finalBytes = decodeFEC(receivedShards, fec);
   } else {
     // Legacy fallback without FEC
@@ -678,12 +754,17 @@ export async function receiveViaFreenet(
     finalBytes = downloadedBytes;
   }
 
+  const completionMessage = isFec
+    ? (fecReport?.recovered
+        ? `✅ File 100% restored! Recovered ${fecReport.missingDataCount} missing data shard(s) via Reed-Solomon FEC (${fecReport.parityShardsUsed} parity shards used).`
+        : `✅ File downloaded with 100% data integrity! All ${targetK} original data shards intact (0 lost).`)
+    : 'File successfully downloaded and decrypted from Freenet!';
+
   onStatusChange({
     code,
     status: 'completed',
-    message: isFec
-      ? 'File successfully reconstructed and decrypted with Reed-Solomon FEC!'
-      : 'File successfully downloaded and decrypted from Freenet!',
+    message: completionMessage,
+    fecReport,
   });
 
   return {
@@ -691,6 +772,8 @@ export async function receiveViaFreenet(
     size,
     type,
     data: finalBytes,
+    message: completionMessage,
+    fecReport,
     file:
       typeof File !== 'undefined'
         ? new File([finalBytes], filename, { type })

@@ -93,8 +93,10 @@
             <span class="inline-block w-1 h-1 rounded-full bg-zinc-700"></span>
             <span class="text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">E2EE</span>
             <span class="inline-block w-1 h-1 rounded-full bg-zinc-700"></span>
-            <span id="protocol-badge"
+            <span id="protocol-badge" data-env-show="web"
               class="text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">WebRTC &amp; IPFS</span>
+            <span id="protocol-badge-fn" data-env-show="freenet"
+              class="hidden text-zinc-400 font-mono text-[11px] bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">Freenet Native</span>
           </p>
 
           <!-- Mode Switcher Tabs (Send / Receive) -->
@@ -363,11 +365,15 @@
               <div class="flex justify-between text-xs text-zinc-400 mb-1.5">
                 <span class="flex items-center gap-1.5">
                   <span class="w-1.5 h-1.5 rounded-full bg-zinc-300 animate-pulse"></span>
-                  <span>Receiving &amp; Decrypting stream...</span>
+                  <span id="receive-progress-label">Receiving &amp; Decrypting stream...</span>
                 </span>
                 <span id="receive-progress-pct" class="font-mono text-zinc-200 font-medium">0%</span>
               </div>
               <progress class="progress w-full bg-zinc-800 h-1.5 rounded-full" value="0" max="100"></progress>
+              <div id="receive-fec-stats" class="hidden mt-2 text-[11px] font-mono text-zinc-400 flex items-center justify-between border-t border-zinc-800/80 pt-1.5">
+                <span id="fec-stat-shards">Shards: 0/0</span>
+                <span id="fec-stat-status" class="text-zinc-500">Checking network...</span>
+              </div>
             </div>
           </div>
         </div>
@@ -460,7 +466,7 @@
               <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Web &amp; CLI</span>
             </h3>
             <p class="text-xs text-zinc-400 leading-relaxed">
-              Seamless cross-platform file transfers: send files from terminal CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">wh send &lt;file&gt;</code> and receive inside this web app.
+              Seamless cross-platform file transfers: send files from terminal CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">fh send &lt;file&gt;</code> and receive inside this web app.
             </p>
             <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
               <li class="flex items-center gap-2">
@@ -614,7 +620,7 @@
               <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">Web &amp; CLI</span>
             </h3>
             <p class="text-xs text-zinc-400 leading-relaxed">
-              Seamless cross-platform file transfers: send files from the CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">wh send --freenet</code> and download inside the Web App, or vice-versa.
+              Seamless cross-platform file transfers: send files from the CLI via <code class="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded font-mono text-xs">fh send --freenet</code> and download inside the Web App, or vice-versa.
             </p>
             <ul class="mt-3 space-y-1.5 text-xs text-zinc-400">
               <li class="flex items-center gap-2">
@@ -697,7 +703,7 @@
       </div>
     </div>
 
-    <!-- ================= VIEW 3: CLI DOCS (`wh`) ================= -->
+    <!-- ================= VIEW 3: CLI DOCS (`fh`) ================= -->
     <div id="view-cli" class="view-panel w-full hidden space-y-8 max-w-4xl py-4">
 
       <!-- === CLI CONTENT: WEB / VERCEL (Default: WebRTC & IPFS) === -->
@@ -709,11 +715,10 @@
             Command Line Interface
           </div>
           <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
-            FreeHole CLI (<code class="font-mono text-zinc-200">wh</code>)
+            FreeHole CLI (<code class="font-mono text-zinc-200">fh</code>)
           </h2>
           <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-            The CLI binary is named <strong><code class="text-zinc-200 font-mono">wh</code></strong> to avoid
-            collisions with <code class="text-zinc-400 font-mono">magic-wormhole</code>. Fast, lightweight, and sharing
+            The CLI binary is named <strong><code class="text-zinc-200 font-mono">fh</code></strong> (or <code class="text-zinc-200 font-mono">freehole</code>). Fast, lightweight, and sharing
             the exact universal core with the browser dashboard.
           </p>
         </div>
@@ -738,7 +743,7 @@
               </button>
             </div>
             <p class="text-[11px] text-zinc-500">Provides direct access to the global <code
-                class="text-zinc-300 font-mono">wh</code> command in any terminal shell.</p>
+                class="text-zinc-300 font-mono">fh</code> command in any terminal shell.</p>
           </div>
 
           <!-- Instant npx Run -->
@@ -771,13 +776,13 @@
               <span class="terminal-dot"></span>
               <span class="terminal-dot"></span>
             </div>
-            <div class="text-[11px] text-zinc-400 font-mono">bash — wh send document.pdf</div>
+            <div class="text-[11px] text-zinc-400 font-mono">bash — fh send document.pdf</div>
             <div class="w-10"></div>
           </div>
           <div class="terminal-body space-y-2">
             <div class="flex items-center justify-between text-zinc-500 text-xs border-b border-zinc-800 pb-2 mb-2">
               <span>Terminal Simulation</span>
-              <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf">
+              <button type="button" class="copy-cmd-btn" data-copy-text="fh send document.pdf">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
@@ -787,7 +792,7 @@
               </button>
             </div>
             <div>
-              <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">wh send document.pdf</span>
+              <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">fh send document.pdf</span>
             </div>
             <div class="text-zinc-400">
               [+] File: <span class="text-zinc-200">document.pdf</span> (14.2 MB)<br />
@@ -821,31 +826,31 @@
               </thead>
               <tbody class="divide-y divide-zinc-850 font-mono text-xs">
                 <tr class="hover:bg-zinc-850/40">
-                  <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt;</td>
+                  <td class="py-3 text-zinc-200 font-semibold">fh send &lt;file&gt;</td>
                   <td class="font-sans text-zinc-400">Encrypts (AES-256-GCM) and initiates direct WebRTC P2P stream between terminals or browsers.</td>
                   <td class="text-right font-sans">
-                    <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf">Copy</button>
+                    <button type="button" class="copy-cmd-btn" data-copy-text="fh send document.pdf">Copy</button>
                   </td>
                 </tr>
                 <tr class="hover:bg-zinc-850/40">
-                  <td class="py-3 text-zinc-200 font-semibold">wh receive &lt;code&gt;</td>
+                  <td class="py-3 text-zinc-200 font-semibold">fh receive &lt;code&gt;</td>
                   <td class="font-sans text-zinc-400">Connects to sender via sync code, receives chunks, and decrypts the file locally.</td>
                   <td class="text-right font-sans">
-                    <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird">Copy</button>
+                    <button type="button" class="copy-cmd-btn" data-copy-text="fh receive 82-gentle-bird">Copy</button>
                   </td>
                 </tr>
                 <tr class="hover:bg-zinc-850/40">
-                  <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt; --ipfs</td>
+                  <td class="py-3 text-zinc-200 font-semibold">fh send &lt;file&gt; --ipfs</td>
                   <td class="font-sans text-zinc-400">Uploads encrypted chunks to IPFS relay for asynchronous transfer between nodes.</td>
                   <td class="text-right font-sans">
-                    <button type="button" class="copy-cmd-btn" data-copy-text="wh send my-file.zip --ipfs">Copy</button>
+                    <button type="button" class="copy-cmd-btn" data-copy-text="fh send my-file.zip --ipfs">Copy</button>
                   </td>
                 </tr>
                 <tr class="hover:bg-zinc-850/40">
-                  <td class="py-3 text-zinc-200 font-semibold">wh list</td>
+                  <td class="py-3 text-zinc-200 font-semibold">fh list</td>
                   <td class="font-sans text-zinc-400">Lists active transfers stored locally.</td>
                   <td class="text-right font-sans">
-                    <button type="button" class="copy-cmd-btn" data-copy-text="wh list">Copy</button>
+                    <button type="button" class="copy-cmd-btn" data-copy-text="fh list">Copy</button>
                   </td>
                 </tr>
               </tbody>
@@ -863,8 +868,8 @@
               <div class="text-xs font-semibold text-zinc-200">1. CLI Sender &rarr; Web App Receiver</div>
               <p class="text-xs text-zinc-400">Send from terminal and receive in this browser:</p>
               <div class="code-snippet-box">
-                <span class="text-zinc-200 select-all text-xs">wh send document.pdf</span>
-                <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf">Copy</button>
+                <span class="text-zinc-200 select-all text-xs">fh send document.pdf</span>
+                <button type="button" class="copy-cmd-btn" data-copy-text="fh send document.pdf">Copy</button>
               </div>
               <p class="text-[11px] text-zinc-500 mt-1">Paste the generated sync code (e.g. <code class="text-zinc-300">82-gentle-bird</code>) into the <strong>Receive File</strong> tab above to start downloading in the browser.</p>
             </div>
@@ -873,8 +878,8 @@
               <div class="text-xs font-semibold text-zinc-200">2. Web App Sender &rarr; CLI Receiver</div>
               <p class="text-xs text-zinc-400">Drag a file into the "Send File" tab in the browser, then download from terminal anywhere:</p>
               <div class="code-snippet-box">
-                <span class="text-zinc-200 select-all text-xs">wh receive 82-gentle-bird</span>
-                <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird">Copy</button>
+                <span class="text-zinc-200 select-all text-xs">fh receive 82-gentle-bird</span>
+                <button type="button" class="copy-cmd-btn" data-copy-text="fh receive 82-gentle-bird">Copy</button>
               </div>
               <p class="text-[11px] text-zinc-500 mt-1">The terminal connects directly via P2P and decrypts the file instantly.</p>
             </div>
@@ -891,7 +896,7 @@
             Command Line Interface
           </div>
           <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
-            FreeHole CLI (<code class="font-mono text-zinc-200">wh</code>) on Freenet
+            FreeHole CLI (<code class="font-mono text-zinc-200">fh</code>) on Freenet
           </h2>
           <p class="text-zinc-400 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
             The CLI binary communicates directly with your local Freenet node on port 7509, using the exact same Blake3 chunking and channel contracts as this Web App.
@@ -906,13 +911,13 @@
               <span class="terminal-dot"></span>
               <span class="terminal-dot"></span>
             </div>
-            <div class="text-[11px] text-zinc-400 font-mono">bash — wh send document.pdf --freenet</div>
+            <div class="text-[11px] text-zinc-400 font-mono">bash — fh send document.pdf --freenet</div>
             <div class="w-10"></div>
           </div>
           <div class="terminal-body space-y-2">
             <div class="flex items-center justify-between text-zinc-500 text-xs border-b border-zinc-800 pb-2 mb-2">
               <span>Terminal Simulation</span>
-              <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">
+              <button type="button" class="copy-cmd-btn" data-copy-text="fh send document.pdf --freenet">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
@@ -922,7 +927,7 @@
               </button>
             </div>
             <div>
-              <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">wh send
+              <span class="text-zinc-500">$</span> <span class="text-zinc-100 font-semibold">fh send
                 document.pdf --freenet</span>
             </div>
             <div class="text-zinc-400">
@@ -959,17 +964,17 @@
               </thead>
               <tbody class="divide-y divide-zinc-850 font-mono text-xs">
                 <tr class="hover:bg-zinc-850/40">
-                  <td class="py-3 text-zinc-200 font-semibold">wh send &lt;file&gt; --freenet</td>
+                  <td class="py-3 text-zinc-200 font-semibold">fh send &lt;file&gt; --freenet</td>
                   <td class="font-sans text-zinc-400">Encrypts (AES-256-GCM) and stores file on Freenet in 128KB Blake3 chunks. Registers manifest on channel contract.</td>
                   <td class="text-right font-sans">
-                    <button type="button" class="copy-cmd-btn" data-copy-text="wh send document.pdf --freenet">Copy</button>
+                    <button type="button" class="copy-cmd-btn" data-copy-text="fh send document.pdf --freenet">Copy</button>
                   </td>
                 </tr>
                 <tr class="hover:bg-zinc-850/40">
-                  <td class="py-3 text-zinc-200 font-semibold">wh receive &lt;code&gt; --freenet</td>
+                  <td class="py-3 text-zinc-200 font-semibold">fh receive &lt;code&gt; --freenet</td>
                   <td class="font-sans text-zinc-400">Resolves manifest on Freenet, downloads &amp; verifies Blake3 chunks, and decrypts the file locally.</td>
                   <td class="text-right font-sans">
-                    <button type="button" class="copy-cmd-btn" data-copy-text="wh receive 82-gentle-bird --freenet">Copy</button>
+                    <button type="button" class="copy-cmd-btn" data-copy-text="fh receive 82-gentle-bird --freenet">Copy</button>
                   </td>
                 </tr>
                 <tr class="hover:bg-zinc-850/40">

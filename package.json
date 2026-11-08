@@ -10,7 +10,7 @@
   },
   "bin": {
     "freehole": "src/index.js",
-    "wh": "src/index.js"
+    "fh": "src/index.js"
   },
   "scripts": {
     "cli": "node src/index.js",
