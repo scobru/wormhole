@@ -19,6 +19,9 @@ import {
 import { ContractCodeT } from '@freenetorg/freenet-stdlib/common';
 import { RelatedContractsT } from '@freenetorg/freenet-stdlib/client-request';
 import { blake3 } from '@noble/hashes/blake3.js';
+import { encodeFEC, decodeFEC, regenerateShard } from './fec.js';
+
+export { encodeFEC, decodeFEC, regenerateShard };
 
 const isNode =
   typeof process !== 'undefined' &&
@@ -452,19 +455,23 @@ export async function sendViaFreenet({
 
   const fileBytes = file instanceof Uint8Array ? file : new Uint8Array(await file.arrayBuffer());
   const fileSize = size ?? fileBytes.byteLength;
-  const numChunks = Math.max(1, Math.ceil(fileSize / CHUNK_SIZE));
+
+  // Apply Forward Error Correction (Reed-Solomon Erasure Coding)
+  const fecResult = encodeFEC(fileBytes, { shardSize: CHUNK_SIZE });
+  const totalShards = fecResult.totalShards;
+  const numDataShards = fecResult.k;
+  const numParityShards = fecResult.m;
 
   onStatusChange({
     code,
     status: 'freenet-uploading-chunks',
-    message: `Encrypting & uploading to Freenet (0/${numChunks} chunks)...`,
+    message: `Encrypting & uploading to Freenet (${totalShards} shards: ${numDataShards} data + ${numParityShards} parity)...`,
   });
 
   const chunkAddrs = [];
-  for (let i = 0; i < numChunks; i++) {
-    const start = i * CHUNK_SIZE;
-    const end = Math.min(start + CHUNK_SIZE, fileSize);
-    const chunkPlain = fileBytes.subarray(start, end);
+  for (let i = 0; i < totalShards; i++) {
+    const shard = fecResult.shards[i];
+    const chunkPlain = shard.data;
     const chunkIv = makeChunkIv(baseIv, i);
 
     const chunkEnc = new Uint8Array(
@@ -474,35 +481,47 @@ export async function sendViaFreenet({
     const addr = await putChunk(chunkEnc);
     chunkAddrs.push(addr);
 
-    const percent = Math.round(((i + 1) / numChunks) * 100);
+    const percent = Math.round(((i + 1) / totalShards) * 100);
+    const label = shard.isParity
+      ? `Parity ${i - numDataShards + 1}/${numParityShards}`
+      : `Data ${i + 1}/${numDataShards}`;
+
     onProgress({
       progress: percent,
-      loaded: end,
+      loaded: Math.min((i + 1) * fecResult.shardSize, fileSize),
       total: fileSize,
       chunkIndex: i + 1,
-      totalChunks: numChunks,
+      totalChunks: totalShards,
     });
     onStatusChange({
       code,
       status: 'freenet-uploading-chunks',
-      message: `Uploading Freenet chunk: ${i + 1}/${numChunks} (${percent}%)`,
+      message: `Uploading Freenet shard ${i + 1}/${totalShards} [${label}] (${percent}%)`,
     });
   }
 
   onStatusChange({
     code,
     status: 'freenet-publishing-manifest',
-    message: 'Publishing transfer manifest to Freenet channel...',
+    message: 'Publishing resilient transfer manifest to Freenet channel...',
   });
 
   const manifest = {
-    v: 1,
+    v: 2,
     filename: filename || file.name || 'file.bin',
     size: fileSize,
     type: type || file.type || 'application/octet-stream',
     lastModified: lastModified || file.lastModified || Date.now(),
-    chunkSize: CHUNK_SIZE,
-    totalChunks: numChunks,
+    chunkSize: fecResult.shardSize,
+    totalChunks: totalShards,
+    fec: {
+      enabled: true,
+      k: numDataShards,
+      m: numParityShards,
+      total: totalShards,
+      originalSize: fileSize,
+      shardSize: fecResult.shardSize,
+    },
     chunks: chunkAddrs,
     salt: toB64(salt),
     iv: toB64(baseIv),
@@ -529,7 +548,7 @@ export async function sendViaFreenet({
   onStatusChange({
     code,
     status: 'sent',
-    message: 'File encrypted & published to Freenet network!',
+    message: 'File encrypted & published to Freenet network with FEC redundancy!',
   });
 
   return { code, manifest, chunkAddrs };
@@ -537,6 +556,7 @@ export async function sendViaFreenet({
 
 /**
  * Resolve, download, and decrypt a file from Freenet using the mnemonic code.
+ * Seamlessly handles resilient Reed-Solomon FEC reconstruction.
  */
 export async function receiveViaFreenet(
   code,
@@ -565,11 +585,6 @@ export async function receiveViaFreenet(
   const manifestIv = fromB64(envelope.iv);
   const manifestCipher = fromB64(envelope.data);
 
-  // We derive temporary key with PBKDF2; note: envelope or code might have salt or we derive with code
-  // Let's resolve the salt:
-  // In sendViaFreenet, we used a random salt, so the manifest envelope can carry salt in plaintext
-  // Wait, if salt was inside the encrypted manifest, we need a known salt or salt in the envelope!
-  // Let's check envelope salt:
   const salt = envelope.salt ? fromB64(envelope.salt) : deriveChannelParams(code).subarray(0, 16);
   const aesKey = await deriveKeyFromCode(code, salt);
 
@@ -585,61 +600,100 @@ export async function receiveViaFreenet(
     throw new Error('Unable to decrypt manifest: invalid or corrupted sync code.');
   }
 
-  const { filename, size, type, chunks, iv: baseIvB64 } = manifest;
+  const { filename, size, type, chunks, iv: baseIvB64, fec } = manifest;
   const baseIv = fromB64(baseIvB64);
-  const numChunks = chunks.length;
+  const totalChunks = chunks.length;
+  const isFec = Boolean(fec && fec.enabled);
+  const targetK = isFec ? fec.k : totalChunks;
 
   onStatusChange({
     code,
     status: 'freenet-downloading-chunks',
-    message: `Downloading & decrypting (0/${numChunks} chunks)...`,
+    message: isFec
+      ? `Downloading from Freenet (need any ${targetK} of ${totalChunks} resilient shards)...`
+      : `Downloading & decrypting (0/${totalChunks} chunks)...`,
     fileInfo: { filename, size, type },
   });
 
-  const downloadedBytes = new Uint8Array(size);
-  let offset = 0;
+  const receivedShards = [];
 
-  for (let i = 0; i < numChunks; i++) {
+  for (let i = 0; i < totalChunks; i++) {
     const addr = chunks[i];
     const chunkIv = makeChunkIv(baseIv, i);
 
-    const chunkEnc = await getChunk(addr);
-    const chunkPlain = new Uint8Array(
-      await subtle.decrypt({ name: 'AES-GCM', iv: chunkIv }, aesKey, chunkEnc)
-    );
+    try {
+      const chunkEnc = await getChunk(addr);
+      const chunkPlain = new Uint8Array(
+        await subtle.decrypt({ name: 'AES-GCM', iv: chunkIv }, aesKey, chunkEnc)
+      );
 
-    downloadedBytes.set(chunkPlain, offset);
-    offset += chunkPlain.byteLength;
+      receivedShards.push({ index: i, data: chunkPlain });
 
-    const percent = Math.round(((i + 1) / numChunks) * 100);
-    onProgress({
-      progress: percent,
-      loaded: offset,
-      total: size,
-      chunkIndex: i + 1,
-      totalChunks: numChunks,
-    });
-    onStatusChange({
-      code,
-      status: 'freenet-downloading-chunks',
-      message: `Downloading from Freenet: ${i + 1}/${numChunks} (${percent}%)`,
-    });
+      const percent = Math.min(100, Math.round((receivedShards.length / targetK) * 100));
+      onProgress({
+        progress: percent,
+        loaded: Math.min(receivedShards.length * (fec?.shardSize || CHUNK_SIZE), size),
+        total: size,
+        chunkIndex: receivedShards.length,
+        totalChunks: targetK,
+      });
+      onStatusChange({
+        code,
+        status: 'freenet-downloading-chunks',
+        message: isFec
+          ? `Retrieved Freenet shard ${receivedShards.length}/${targetK} required (${percent}%)`
+          : `Downloading from Freenet: ${receivedShards.length}/${totalChunks} (${percent}%)`,
+      });
+
+      // Once we have reached K shards under FEC, we have mathematically sufficient data to reconstruct!
+      if (isFec && receivedShards.length >= targetK) {
+        break;
+      }
+    } catch (err) {
+      console.warn(`[FreeHole FEC] Shard ${i} unavailable (${err.message}). Resilient parity will compensate.`);
+    }
+  }
+
+  let finalBytes;
+  if (isFec) {
+    if (receivedShards.length < targetK) {
+      throw new Error(
+        `Failed to reconstruct file: only ${receivedShards.length}/${targetK} shards available on Freenet.`
+      );
+    }
+    finalBytes = decodeFEC(receivedShards, fec);
+  } else {
+    // Legacy fallback without FEC
+    if (receivedShards.length < totalChunks) {
+      throw new Error(`Failed to download legacy file: ${totalChunks - receivedShards.length} chunks missing.`);
+    }
+    const downloadedBytes = new Uint8Array(size);
+    let offset = 0;
+    for (let i = 0; i < totalChunks; i++) {
+      const shard = receivedShards.find((s) => s.index === i);
+      if (!shard) throw new Error(`Missing chunk #${i}`);
+      downloadedBytes.set(shard.data, offset);
+      offset += shard.data.byteLength;
+    }
+    finalBytes = downloadedBytes;
   }
 
   onStatusChange({
     code,
     status: 'completed',
-    message: 'File successfully downloaded and decrypted from Freenet!',
+    message: isFec
+      ? 'File successfully reconstructed and decrypted with Reed-Solomon FEC!'
+      : 'File successfully downloaded and decrypted from Freenet!',
   });
 
   return {
     filename,
     size,
     type,
-    data: downloadedBytes,
+    data: finalBytes,
     file:
       typeof File !== 'undefined'
-        ? new File([downloadedBytes], filename, { type })
+        ? new File([finalBytes], filename, { type })
         : null,
   };
 }

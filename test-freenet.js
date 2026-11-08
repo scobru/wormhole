@@ -8,6 +8,8 @@ import {
   toB64,
   fromB64,
   isFreenetAvailable,
+  encodeFEC,
+  decodeFEC,
 } from './web/src/shared/freenet.js';
 import { generateCode } from './web/src/shared/wormhole-core.js';
 
@@ -75,6 +77,21 @@ try {
   const available = await isFreenetAvailable(800);
   console.log(`   Local Freenet Gateway responsiveness: ${available ? 'ACTIVE (connected)' : 'OFFLINE (probe handled cleanly)'}`);
   console.log('   ✅ Availability probe completed without crashing.\n');
+
+  // Test 6: Reed-Solomon Erasure Coding & Loss Resilience
+  console.log('6. Reed-Solomon Forward Error Correction (FEC):');
+  const fecPayload = new TextEncoder().encode('Freenet Sovereign Transfer with Reed-Solomon Erasure Coding (FEC). Recoverable even with lost shards!');
+  const fecResult = encodeFEC(fecPayload, { shardSize: 32, parityCount: 2 });
+  assert.equal(fecResult.totalShards, fecResult.k + 2);
+
+  // Simulate loss of shards 0 and 2 (data loss)
+  const survivingShards = fecResult.shards.filter((s) => s.index !== 0 && s.index !== 2);
+  const recoveredBytes = decodeFEC(survivingShards, fecResult);
+  assert.deepEqual(recoveredBytes, fecPayload, 'Recovered payload matches original after losing 2 shards');
+  console.log(`   Encoded into ${fecResult.k} data + ${fecResult.m} parity shards (total: ${fecResult.totalShards})`);
+  console.log(`   Simulated loss of data shards #0 and #2 -> Restored payload bit-for-bit:`);
+  console.log(`   "${new TextDecoder().decode(recoveredBytes)}"`);
+  console.log('   ✅ Reed-Solomon FEC resilience verified.\n');
 
   console.log('🎉 All Wormhole Freenet tests passed successfully!\n');
 } catch (err) {
