@@ -2,7 +2,7 @@ import {
   encodeFEC,
   decodeFEC,
   regenerateShard,
-} from './web/src/shared/fec.js';
+} from './web/src/shared/freenet.js';
 
 console.log('🧪 Starting FreeHole Forward Error Correction (FEC) Test Suite...\n');
 

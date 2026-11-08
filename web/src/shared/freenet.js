@@ -604,6 +604,7 @@ export async function receiveViaFreenet(
   const baseIv = fromB64(baseIvB64);
   const totalChunks = chunks.length;
   const isFec = Boolean(fec && fec.enabled);
+  const totalShards = isFec ? (fec?.total || totalChunks) : totalChunks;
   const targetK = isFec ? fec.k : totalChunks;
 
   onStatusChange({
