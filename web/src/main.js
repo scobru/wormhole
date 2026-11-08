@@ -2,8 +2,14 @@ import { WormholeCore, WormholeStatus } from '@wormhole/core';
 import ZEN from 'zen';
 import '../styles/wormhole.css';
 
-const RELAY_URL = import.meta.env.VITE_RELAY_URL;
-const AUTH_TOKEN = import.meta.env.VITE_AUTH_TOKEN;
+const RELAY_URL =
+  import.meta.env.VITE_RELAY_URL && import.meta.env.VITE_RELAY_URL !== 'undefined'
+    ? import.meta.env.VITE_RELAY_URL
+    : 'https://delay.scobrudot.dev';
+const AUTH_TOKEN =
+  import.meta.env.VITE_AUTH_TOKEN && import.meta.env.VITE_AUTH_TOKEN !== 'undefined'
+    ? import.meta.env.VITE_AUTH_TOKEN
+    : 'shogun2025';
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 export function isFreenetEnvironment() {

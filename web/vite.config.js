@@ -39,6 +39,14 @@ function stubNodeModules() {
 export default defineConfig({
   base: './',
   envDir: projectRoot,
+  define: {
+    'import.meta.env.VITE_RELAY_URL': JSON.stringify(
+      process.env.VITE_RELAY_URL || 'https://delay.scobrudot.dev'
+    ),
+    'import.meta.env.VITE_AUTH_TOKEN': JSON.stringify(
+      process.env.VITE_AUTH_TOKEN || 'shogun2025'
+    ),
+  },
   plugins: [stubNodeModules()],
   server: {
     fs: {

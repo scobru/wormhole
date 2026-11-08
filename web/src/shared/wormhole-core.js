@@ -695,6 +695,15 @@ export class WormholeCore {
     }
 
     // Default: IPFS Relay mode
+    const targetRelay =
+      relayUrl && relayUrl !== 'undefined'
+        ? relayUrl
+        : 'https://delay.scobrudot.dev';
+    const targetToken =
+      authToken && authToken !== 'undefined'
+        ? authToken
+        : 'shogun2025';
+
     this.onStatusChange({
       code,
       status: WormholeStatus.CHECKING_RELAY,
@@ -702,7 +711,7 @@ export class WormholeCore {
     });
 
     try {
-      const healthCheck = await fetch(`${relayUrl}/health`);
+      const healthCheck = await fetch(`${targetRelay}/health`);
       if (!healthCheck.ok) {
         throw new Error('Relay IPFS non raggiungibile');
       }
@@ -730,10 +739,10 @@ export class WormholeCore {
         `${filename || encryptionMetadata.originalName}.enc`;
       formData.append('file', encryptedFile, uploadFilename);
 
-      const response = await fetch(`${relayUrl}/api/v1/ipfs/upload`, {
+      const response = await fetch(`${targetRelay}/api/v1/ipfs/upload`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${targetToken}`,
         },
         body: formData,
       });
@@ -780,7 +789,7 @@ export class WormholeCore {
         type: type,
         mode: 'ipfs',
         ipfsHash: ipfsHash,
-        relayUrl: relayUrl,
+        relayUrl: targetRelay,
         createdAt: Date.now(),
         encrypted: true,
         encryptedSize: encryptedFile.size,
@@ -817,11 +826,11 @@ export class WormholeCore {
               message: 'Tentativo di unpin da IPFS per pulizia...',
             });
 
-            const unpinResponse = await fetch(`${relayUrl}/api/v1/ipfs/pin/rm`, {
+            const unpinResponse = await fetch(`${targetRelay}/api/v1/ipfs/pin/rm`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${authToken}`,
+                Authorization: `Bearer ${targetToken}`,
               },
               body: JSON.stringify({ cid: ipfsHash }),
             });
@@ -1199,7 +1208,12 @@ export class WormholeCore {
         });
 
         try {
-          const effectiveRelayUrl = metadata.relayUrl || relayUrl || 'https://delay.scobrudot.dev';
+          const effectiveRelayUrl =
+            metadata.relayUrl && metadata.relayUrl !== 'undefined'
+              ? metadata.relayUrl
+              : relayUrl && relayUrl !== 'undefined'
+                ? relayUrl
+                : 'https://delay.scobrudot.dev';
           const response = await fetch(`${effectiveRelayUrl}/api/v1/ipfs/cat/${metadata.ipfsHash}`);
           if (!response.ok) {
             throw new Error(
