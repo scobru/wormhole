@@ -32,6 +32,7 @@ export const CHUNK_SIZE = 256 * 1024; // 256 KB per chunk
 const PUT_TIMEOUT_MS = 15000;
 const GET_TIMEOUT_MS = 20000;
 const PUT_RETRIES = 5;
+const GET_CONCURRENCY = 6;
 
 function getWsUrl() {
   const loc = typeof globalThis.location !== 'undefined' ? globalThis.location : null;
@@ -624,7 +625,9 @@ export async function receiveViaFreenet(
   const receivedShards = [];
   const failedShards = [];
 
-  for (let i = 0; i < totalChunks; i++) {
+  // Fetch shards in parallel (a few in flight): one dead shard costs a 20s timeout, not 20s of everyone's time.
+  let next = 0;
+  const fetchShard = async (i) => {
     const addr = chunks[i];
     const chunkIv = makeChunkIv(baseIv, i);
     const isParityShard = isFec && i >= targetK;
@@ -632,28 +635,11 @@ export async function receiveViaFreenet(
       ? (isParityShard ? `Parity shard #${i - targetK + 1}/${fec.m}` : `Data shard #${i + 1}/${targetK}`)
       : `Chunk #${i + 1}/${totalChunks}`;
 
-    onStatusChange({
-      code,
-      status: 'freenet-downloading-chunks',
-      message: isFec
-        ? `Fetching ${shardLabel} (${receivedShards.length}/${targetK} required)${failedShards.length > 0 ? ` · ⚠️ ${failedShards.length} missed` : ''}...`
-        : `Fetching chunk ${i + 1}/${totalChunks}...`,
-      stats: {
-        retrieved: receivedShards.length,
-        required: targetK,
-        total: totalChunks,
-        failed: failedShards.length,
-        currentShard: i + 1,
-        isParity: isParityShard,
-      },
-    });
-
     try {
       const chunkEnc = await getChunk(addr);
       const chunkPlain = new Uint8Array(
         await subtle.decrypt({ name: 'AES-GCM', iv: chunkIv }, aesKey, chunkEnc)
       );
-
       receivedShards.push({ index: i, data: chunkPlain, isParity: isParityShard });
 
       const percent = Math.min(100, Math.round((receivedShards.length / targetK) * 100));
@@ -678,11 +664,6 @@ export async function receiveViaFreenet(
           failed: failedShards.length,
         },
       });
-
-      // Once we have reached K shards under FEC, we have mathematically sufficient data to reconstruct!
-      if (isFec && receivedShards.length >= targetK) {
-        break;
-      }
     } catch (err) {
       failedShards.push({ index: i, isParity: isParityShard, error: err.message });
       console.warn(`[FreeHole FEC] Shard ${i} unavailable (${err.message}). Resilient parity will compensate.`);
@@ -701,7 +682,14 @@ export async function receiveViaFreenet(
         },
       });
     }
-  }
+  };
+  const worker = async () => {
+    // Under FEC, K shards are mathematically enough; stop launching new fetches once we have them.
+    while (next < totalChunks && !(isFec && receivedShards.length >= targetK)) {
+      await fetchShard(next++);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(GET_CONCURRENCY, totalChunks) }, worker));
 
   let finalBytes;
   let fecReport = null;
@@ -744,6 +732,24 @@ export async function receiveViaFreenet(
     }
 
     finalBytes = decodeFEC(receivedShards, fec);
+
+    // Self-heal: shards that timed out are rebuilt and re-put. Encryption is deterministic per shard
+    // (fixed IV), so the ciphertext hashes to the same address the manifest already points at.
+    if (failedShards.length > 0) {
+      let repaired = 0;
+      for (const f of failedShards) {
+        try {
+          const plain = regenerateShard(receivedShards, f.index, fec);
+          const enc = new Uint8Array(
+            await subtle.encrypt({ name: 'AES-GCM', iv: makeChunkIv(baseIv, f.index) }, aesKey, plain)
+          );
+          if ((await putChunk(enc)) === chunks[f.index]) repaired++;
+        } catch (e) {
+          console.warn(`[FreeHole FEC] Repair of shard ${f.index} failed: ${e.message}`);
+        }
+      }
+      fecReport.repairedShards = repaired;
+    }
   } else {
     // Legacy fallback without FEC
     if (receivedShards.length < totalChunks) {
