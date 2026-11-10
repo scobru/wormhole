@@ -31,6 +31,7 @@ const isNode =
 export const CHUNK_SIZE = 256 * 1024; // 256 KB per chunk
 const PUT_TIMEOUT_MS = 15000;
 const GET_TIMEOUT_MS = 20000;
+const PUT_RETRIES = 5;
 
 function getWsUrl() {
   const loc = typeof globalThis.location !== 'undefined' ? globalThis.location : null;
@@ -243,28 +244,32 @@ export async function putChunk(content) {
     key
   );
 
-  const client = await getFreenetApi();
-  try {
-    await withTimeout(
-      client.put(
-        new PutRequest(
-          new ContractContainer(ContractType.WasmContractV1, contract),
-          Array.from(bytes),
-          new RelatedContractsT()
-        )
-      ),
-      PUT_TIMEOUT_MS
-    );
-  } catch (err) {
-    if (/timeout/i.test(String(err))) {
+  // A slow node must not kill a many-chunk upload: retry a timed-out chunk with backoff before giving up.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const client = await getFreenetApi();
+      await withTimeout(
+        client.put(
+          new PutRequest(
+            new ContractContainer(ContractType.WasmContractV1, contract),
+            Array.from(bytes),
+            new RelatedContractsT()
+          )
+        ),
+        PUT_TIMEOUT_MS
+      );
+      break;
+    } catch (err) {
+      if (/already stored|duplicate/i.test(String(err))) break;
+      if (!/timeout/i.test(String(err))) throw err;
       await resetSocket();
       try {
-        await withTimeout(getChunk(addr), 5000);
+        await withTimeout(getChunk(addr), 5000); // the put may have landed despite the timeout
+        break;
       } catch (_) {
-        throw new Error(`Freenet did not accept chunk ${addr}`);
+        if (attempt >= PUT_RETRIES) throw new Error(`Freenet did not accept chunk ${addr} after ${attempt} attempts`);
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
       }
-    } else if (!/already stored|duplicate/i.test(String(err))) {
-      throw err;
     }
   }
 
