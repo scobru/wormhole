@@ -626,6 +626,12 @@ export async function receiveViaFreenet(
   const failedShards = [];
 
   // Fetch shards in parallel (a few in flight): one dead shard costs a 20s timeout, not 20s of everyone's time.
+  // Random order (parity included) so rarely-read parity shards stay warm on peers instead of aging out.
+  const order = Array.from({ length: totalChunks }, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
   let next = 0;
   const fetchShard = async (i) => {
     const addr = chunks[i];
@@ -686,7 +692,7 @@ export async function receiveViaFreenet(
   const worker = async () => {
     // Under FEC, K shards are mathematically enough; stop launching new fetches once we have them.
     while (next < totalChunks && !(isFec && receivedShards.length >= targetK)) {
-      await fetchShard(next++);
+      await fetchShard(order[next++]);
     }
   };
   await Promise.all(Array.from({ length: Math.min(GET_CONCURRENCY, totalChunks) }, worker));
