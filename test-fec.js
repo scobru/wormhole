@@ -3,6 +3,7 @@ import {
   decodeFEC,
   regenerateShard,
 } from './web/src/shared/freenet.js';
+import { createGeneratorMatrix, gfMul } from 'freenet-blob/fec';
 
 console.log('🧪 Starting FreeHole Forward Error Correction (FEC) Test Suite...\n');
 
@@ -118,6 +119,107 @@ function assert(condition, message) {
     }
   }
   assert(match, 'Restored data verified with 10,000 random byte probes');
+}
+
+// 4. Regression: Large payload (> 48 MB) stays within GF(2^8) 256-shard limit and decodes from any K shards
+{
+  const fiftyMB = 50 * 1024 * 1024;
+  const largeBytes = new Uint8Array(fiftyMB);
+  for (let i = 0; i < fiftyMB; i += 4097) {
+    largeBytes[i] = (i * 13 + 7) & 0xff;
+  }
+
+  const fec = encodeFEC(largeBytes, { shardSize: 256 * 1024 });
+  assert(fec.k === 192 && fec.m === 64 && fec.totalShards === 256, '50MB file capped at K=192, M=64 (total 256 <= GF(2^8))');
+
+  // Drop 5 data shards and shuffle remaining shards before selecting K
+  const dropped = new Set([0, 17, 64, 128, 191]);
+  const pool = fec.shards.filter((s) => !dropped.has(s.index));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const received = pool.slice(0, fec.k);
+  const restored = decodeFEC(received, fec);
+
+  assert(restored.byteLength === fiftyMB, 'Restored 50MB length matches original');
+  let match = true;
+  for (let i = 0; i < fiftyMB; i += 4097) {
+    if (restored[i] !== largeBytes[i]) {
+      match = false;
+      break;
+    }
+  }
+  assert(match, '50MB payload restored bit-for-bit with 5 missing data shards in random order');
+}
+
+// 5. Regression: Legacy > 48 MB manifest (K=200, M=64, totalShards=264) with overflow shards >= 256
+{
+  const K = 200;
+  const M = 64;
+  const shardSize = 64;
+  const originalSize = K * shardSize;
+  const legacyBytes = new Uint8Array(originalSize);
+  for (let i = 0; i < originalSize; i++) {
+    legacyBytes[i] = (i * 29 + 3) & 0xff;
+  }
+
+  const G = createGeneratorMatrix(K, M);
+  const dataShards = Array.from({ length: K }, (_, i) =>
+    legacyBytes.subarray(i * shardSize, (i + 1) * shardSize)
+  );
+  const allShards = dataShards.map((data, index) => ({ index, data }));
+  for (let p = 0; p < M; p++) {
+    const row = G[K + p];
+    const parity = new Uint8Array(shardSize);
+    for (let d = 0; d < K; d++) {
+      const coeff = row[d];
+      if (coeff === 0) continue;
+      for (let b = 0; b < shardSize; b++) {
+        parity[b] ^= gfMul(coeff, dataShards[d][b]);
+      }
+    }
+    allShards.push({ index: K + p, data: parity });
+  }
+
+  // Verify legacy bug symptom: shards 256..263 duplicate data shard 0
+  assert(
+    allShards[256].data.every((v, idx) => v === allShards[0].data[idx]),
+    'Legacy K=200, M=64 overflow shards >= 256 match data shard 0'
+  );
+
+  // Put shard 0 and overflow shards 256..260 at the front, plus 199 valid shards (1..198 and parity 200, missing 199)
+  const fecMeta = { k: K, m: M, total: K + M, originalSize, shardSize };
+  const receivedWithDuplicates = [
+    allShards[0],
+    allShards[256],
+    allShards[257],
+    allShards[258],
+    allShards[259],
+    allShards[260],
+    ...allShards.slice(1, 199),
+    allShards[200],
+  ];
+
+  const restored = decodeFEC(receivedWithDuplicates, fecMeta);
+  assert(
+    restored.byteLength === originalSize &&
+      restored.every((v, idx) => v === legacyBytes[idx]),
+    'Legacy K=200, M=64 manifest with shard 0 + overflow shards 256..260 + missing data shard 199 decodes bit-for-bit'
+  );
+
+  // Also verify recovery when canonical shard 0 was lost and only overflow shard 256 arrived
+  const receivedViaOverflow = [
+    allShards[256],
+    ...allShards.slice(1, 199),
+    allShards[200],
+  ];
+  const restoredOverflow = decodeFEC(receivedViaOverflow, fecMeta);
+  assert(
+    restoredOverflow.byteLength === originalSize &&
+      restoredOverflow.every((v, idx) => v === legacyBytes[idx]),
+    'Legacy K=200, M=64 manifest recovers shard 0 via overflow shard 256 when shard 0 is missing'
+  );
 }
 
 console.log(`\n🎉 All ${testsPassed}/${testsTotal} FEC tests passed successfully!`);

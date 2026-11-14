@@ -1139,7 +1139,7 @@ fraction.js@^5.3.4:
 
 "freenet-blob@github:scobru/freenet-blob":
   version "1.0.0"
-  resolved "git+ssh://git@github.com/scobru/freenet-blob.git#6164cc59e267358c1766fa0955c58d99e58a23eb"
+  resolved "git+ssh://git@github.com/scobru/freenet-blob.git#27d08f1b6b92ff482d95fbb6e116a3b52f5c023c"
   dependencies:
     "@freenetorg/freenet-stdlib" "^0.4.0"
     "@noble/hashes" "^2.4.0"

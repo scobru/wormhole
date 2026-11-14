@@ -623,19 +623,30 @@ export async function receiveViaFreenet(
   });
 
   const receivedShards = [];
+  const independentIndices = new Set();
   const failedShards = [];
 
   // Fetch shards in parallel (a few in flight): one dead shard costs a 20s timeout, not 20s of everyone's time.
   // Random order (parity included) so rarely-read parity shards stay warm on peers instead of aging out.
-  const order = Array.from({ length: totalChunks }, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
+  // Partition legacy overflow shards (>= 256, which duplicate shard 0) after 0..255 so they are only fetched if needed.
+  const shuffle = (arr) => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+  const primaryLimit = isFec ? Math.min(totalChunks, 256) : totalChunks;
+  const primaryOrder = shuffle(Array.from({ length: primaryLimit }, (_, i) => i));
+  const overflowOrder = shuffle(
+    Array.from({ length: Math.max(0, totalChunks - primaryLimit) }, (_, i) => primaryLimit + i)
+  );
+  const order = [...primaryOrder, ...overflowOrder];
   let next = 0;
   const fetchShard = async (i) => {
     const addr = chunks[i];
     const chunkIv = makeChunkIv(baseIv, i);
+    const effectiveIndex = isFec && i >= 256 ? 0 : i;
     const isParityShard = isFec && i >= targetK;
     const shardLabel = isFec
       ? (isParityShard ? `Parity shard #${i - targetK + 1}/${fec.m}` : `Data shard #${i + 1}/${targetK}`)
@@ -646,14 +657,21 @@ export async function receiveViaFreenet(
       const chunkPlain = new Uint8Array(
         await subtle.decrypt({ name: 'AES-GCM', iv: chunkIv }, aesKey, chunkEnc)
       );
-      receivedShards.push({ index: i, data: chunkPlain, isParity: isParityShard });
+      independentIndices.add(effectiveIndex);
+      receivedShards.push({
+        index: effectiveIndex,
+        rawIndex: i,
+        data: chunkPlain,
+        isParity: isFec && effectiveIndex >= targetK,
+      });
 
-      const percent = Math.min(100, Math.round((receivedShards.length / targetK) * 100));
+      const retrievedCount = isFec ? independentIndices.size : receivedShards.length;
+      const percent = Math.min(100, Math.round((retrievedCount / targetK) * 100));
       onProgress({
         progress: percent,
-        loaded: Math.min(receivedShards.length * (fec?.shardSize || CHUNK_SIZE), size),
+        loaded: Math.min(retrievedCount * (fec?.shardSize || CHUNK_SIZE), size),
         total: size,
-        chunkIndex: receivedShards.length,
+        chunkIndex: retrievedCount,
         totalChunks: targetK,
         failedCount: failedShards.length,
       });
@@ -661,10 +679,10 @@ export async function receiveViaFreenet(
         code,
         status: 'freenet-downloading-chunks',
         message: isFec
-          ? `Retrieved ${shardLabel} [${receivedShards.length}/${targetK} required, ${percent}%]${failedShards.length > 0 ? ` · ⚠️ ${failedShards.length} missed` : ''}`
-          : `Downloading from Freenet: ${receivedShards.length}/${totalChunks} (${percent}%)`,
+          ? `Retrieved ${shardLabel} [${retrievedCount}/${targetK} required, ${percent}%]${failedShards.length > 0 ? ` · ⚠️ ${failedShards.length} missed` : ''}`
+          : `Downloading from Freenet: ${retrievedCount}/${totalChunks} (${percent}%)`,
         stats: {
-          retrieved: receivedShards.length,
+          retrieved: retrievedCount,
           required: targetK,
           total: totalChunks,
           failed: failedShards.length,
@@ -673,6 +691,7 @@ export async function receiveViaFreenet(
     } catch (err) {
       failedShards.push({ index: i, isParity: isParityShard, error: err.message });
       console.warn(`[FreeHole FEC] Shard ${i} unavailable (${err.message}). Resilient parity will compensate.`);
+      const retrievedCount = isFec ? independentIndices.size : receivedShards.length;
       onStatusChange({
         code,
         status: 'freenet-downloading-chunks',
@@ -681,7 +700,7 @@ export async function receiveViaFreenet(
           ? `⚠️ ${shardLabel} unreachable on peer (${err.message || 'timed out'}). Parity will compensate (${failedShards.length} missed so far).`
           : `⚠️ Chunk #${i + 1} unavailable.`,
         stats: {
-          retrieved: receivedShards.length,
+          retrieved: retrievedCount,
           required: targetK,
           total: totalChunks,
           failed: failedShards.length,
@@ -690,8 +709,8 @@ export async function receiveViaFreenet(
     }
   };
   const worker = async () => {
-    // Under FEC, K shards are mathematically enough; stop launching new fetches once we have them.
-    while (next < totalChunks && !(isFec && receivedShards.length >= targetK)) {
+    // Under FEC, K independent shards are mathematically enough; stop launching new fetches once we have them.
+    while (next < totalChunks && !(isFec && independentIndices.size >= targetK)) {
       await fetchShard(order[next++]);
     }
   };
@@ -701,9 +720,9 @@ export async function receiveViaFreenet(
   let fecReport = null;
 
   if (isFec) {
-    if (receivedShards.length < targetK) {
+    if (independentIndices.size < targetK) {
       throw new Error(
-        `Failed to reconstruct file: only ${receivedShards.length}/${targetK} shards available on Freenet (${failedShards.length} shards unreachable).`
+        `Failed to reconstruct file: only ${independentIndices.size}/${targetK} shards available on Freenet (${failedShards.length} shards unreachable).`
       );
     }
 
@@ -742,10 +761,18 @@ export async function receiveViaFreenet(
     // Self-heal: shards that timed out are rebuilt and re-put. Encryption is deterministic per shard
     // (fixed IV), so the ciphertext hashes to the same address the manifest already points at.
     if (failedShards.length > 0) {
+      const restoredDataShards = Array.from({ length: targetK }, (_, d) => {
+        const s = new Uint8Array(fec.shardSize);
+        const start = d * fec.shardSize;
+        if (start < finalBytes.byteLength) {
+          s.set(finalBytes.subarray(start, Math.min(start + fec.shardSize, finalBytes.byteLength)));
+        }
+        return { index: d, data: s };
+      });
       let repaired = 0;
       for (const f of failedShards) {
         try {
-          const plain = regenerateShard(receivedShards, f.index, fec);
+          const plain = regenerateShard(restoredDataShards, f.index, fec);
           const enc = new Uint8Array(
             await subtle.encrypt({ name: 'AES-GCM', iv: makeChunkIv(baseIv, f.index) }, aesKey, plain)
           );
